@@ -1,5 +1,10 @@
 package gcoptional
 
+import (
+	"bytes"
+	"encoding/json"
+)
+
 type Optional[T any] struct {
 	vl     T
 	exists bool
@@ -34,20 +39,27 @@ func (o Optional[T]) TakeOrError(orElseErrFunc func() error) (T, error) {
 	return o.vl, orElseErrFunc()
 }
 
-func FromPointer[T any](vl *T) Optional[T] {
-	if vl == nil {
-		return None[T]()
+func (o Optional[T]) MarshalJSON() ([]byte, error) {
+	if !o.IsPresent() {
+		return jsonNull, nil
 	}
-	return FromValue(*vl)
+	marshal, err := json.Marshal(o.MustTake())
+	if err != nil {
+		return nil, err
+	}
+	return marshal, nil
 }
 
-func FromValue[T any](vl T) Optional[T] {
-	return Optional[T]{
-		vl:     vl,
-		exists: true,
+func (o *Optional[T]) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || bytes.Equal(data, jsonNull) {
+		*o = EmtpyValue[T]()
+		return nil
 	}
-}
-
-func None[T any]() Optional[T] {
-	return Optional[T]{}
+	var v T
+	err := json.Unmarshal(data, &v)
+	if err != nil {
+		return err
+	}
+	*o = FromValue(v)
+	return nil
 }

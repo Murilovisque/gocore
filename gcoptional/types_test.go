@@ -1,6 +1,7 @@
 package gcoptional
 
 import (
+	"encoding/json"
 	"errors"
 	"reflect"
 	"testing"
@@ -36,7 +37,7 @@ func TestNone(t *testing.T) {
 	}
 
 	// None
-	opn := None[int]()
+	opn := EmtpyValue[int]()
 	if opn.IsPresent() {
 		t.Fatalf("expected '%v', but '%v'", false, opn)
 	}
@@ -49,4 +50,111 @@ func TestNone(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected not nil %s", err)
 	}
+}
+
+func TestJsonMarshal(t *testing.T) {
+	testArgs := []struct {
+		jsonArgument any
+		jsonText     string
+	}{
+		{
+			jsonArgument: struct {
+				Name Optional[string] `json:"name"`
+			}{
+				Name: FromValue("Murilo"),
+			},
+			jsonText: `{"name":"Murilo"}`,
+		},
+		{
+			jsonArgument: struct {
+				Age Optional[int] `json:"age"`
+			}{
+				Age: FromValue(2),
+			},
+			jsonText: `{"age":2}`,
+		},
+		{
+			jsonArgument: struct {
+				Age Optional[int] `json:"age"`
+			}{
+				Age: EmtpyValue[int](),
+			},
+			jsonText: `{"age":null}`,
+		},
+		{
+			jsonArgument: testComplexJson{
+				Name: "teste",
+				SubValue: FromValue(testSubComplex{
+					Age: 10,
+				}),
+			},
+			jsonText: `{"name":"teste","subValue":{"age":10}}`,
+		},
+		{
+			jsonArgument: []testComplexJson{
+				{
+					Name: "teste",
+					SubValue: FromValue(testSubComplex{
+						Age: 10,
+					}),
+				},
+			},
+			jsonText: `[{"name":"teste","subValue":{"age":10}}]`,
+		},
+	}
+	for _, a := range testArgs {
+		txtJson, err := json.Marshal(&a.jsonArgument)
+		if err != nil {
+			t.Fatalf("the error is not expected, but '%s'", err.Error())
+		}
+		result := string(txtJson)
+		if result != a.jsonText {
+			t.Fatalf("expected '%s', but '%s'", a.jsonText, result)
+		}
+	}
+}
+
+func TestJsonUnmarshal(t *testing.T) {
+	testArgs := []struct {
+		jsonStructExpected testComplexJson
+		jsonStructEmpty    testComplexJson
+		jsonString         string
+	}{
+		{
+			jsonStructExpected: testComplexJson{
+				Name: "teste",
+				SubValue: FromValue(testSubComplex{
+					Age: 10,
+				}),
+			},
+			jsonStructEmpty: testComplexJson{},
+			jsonString:      `{"name":"teste","subValue":{"age":10}}`,
+		},
+		{
+			jsonStructExpected: testComplexJson{
+				Name:     "",
+				SubValue: EmtpyValue[testSubComplex](),
+			},
+			jsonStructEmpty: testComplexJson{},
+			jsonString:      `{"name":"","subValue":null}`,
+		},
+	}
+	for _, a := range testArgs {
+		err := json.Unmarshal([]byte(a.jsonString), &a.jsonStructEmpty)
+		if err != nil {
+			t.Fatalf("the error is not expected, but '%s'", err.Error())
+		}
+		if !reflect.DeepEqual(a.jsonStructExpected, a.jsonStructEmpty) {
+			t.Fatalf("expected '%#v', but '%#v'", a.jsonStructExpected, a.jsonStructEmpty)
+		}
+	}
+}
+
+type testComplexJson struct {
+	Name     string                   `json:"name"`
+	SubValue Optional[testSubComplex] `json:"subValue"`
+}
+
+type testSubComplex struct {
+	Age int `json:"age"`
 }
