@@ -1,4 +1,4 @@
-package gcoptional
+package gcopt
 
 import (
 	"encoding/json"
@@ -14,7 +14,7 @@ func TestOptional(t *testing.T) {
 	}
 	st.id = 1
 	st.name = "tester"
-	op := FromValue(st)
+	op := Of(st)
 	if !op.IsPresent() || !reflect.DeepEqual(st, op.MustTake()) {
 		t.Fatalf("expected '%v', but '%v'", st, op.MustTake())
 	}
@@ -27,7 +27,7 @@ func TestOptional(t *testing.T) {
 func TestNone(t *testing.T) {
 	// FromPointer
 	var st *struct{}
-	op := FromPointer(st)
+	op := OfPtr(st)
 	if op.IsPresent() {
 		t.Fatalf("expected '%v', but '%v'", false, op)
 	}
@@ -37,7 +37,7 @@ func TestNone(t *testing.T) {
 	}
 
 	// None
-	opn := EmtpyValue[int]()
+	opn := Empty[int]()
 	if opn.IsPresent() {
 		t.Fatalf("expected '%v', but '%v'", false, opn)
 	}
@@ -46,7 +46,7 @@ func TestNone(t *testing.T) {
 	if vln != expectedValue {
 		t.Fatalf("expected '%v', but '%v'", expectedValue, vln)
 	}
-	_, err := opn.TakeOrError(func() error { return errors.New("failed") })
+	_, err := opn.TakeOrErrorElse(func() error { return errors.New("failed") })
 	if err == nil {
 		t.Fatalf("expected not nil %s", err)
 	}
@@ -61,7 +61,7 @@ func TestJsonMarshal(t *testing.T) {
 			jsonArgument: struct {
 				Name Optional[string] `json:"name"`
 			}{
-				Name: FromValue("Murilo"),
+				Name: Of("Murilo"),
 			},
 			jsonText: `{"name":"Murilo"}`,
 		},
@@ -69,7 +69,7 @@ func TestJsonMarshal(t *testing.T) {
 			jsonArgument: struct {
 				Age Optional[int] `json:"age"`
 			}{
-				Age: FromValue(2),
+				Age: Of(2),
 			},
 			jsonText: `{"age":2}`,
 		},
@@ -77,14 +77,14 @@ func TestJsonMarshal(t *testing.T) {
 			jsonArgument: struct {
 				Age Optional[int] `json:"age"`
 			}{
-				Age: EmtpyValue[int](),
+				Age: Empty[int](),
 			},
 			jsonText: `{"age":null}`,
 		},
 		{
 			jsonArgument: testComplexJson{
 				Name: "teste",
-				SubValue: FromValue(testSubComplex{
+				SubValue: Of(testSubComplex{
 					Age: 10,
 				}),
 			},
@@ -94,7 +94,7 @@ func TestJsonMarshal(t *testing.T) {
 			jsonArgument: []testComplexJson{
 				{
 					Name: "teste",
-					SubValue: FromValue(testSubComplex{
+					SubValue: Of(testSubComplex{
 						Age: 10,
 					}),
 				},
@@ -123,7 +123,7 @@ func TestJsonUnmarshal(t *testing.T) {
 		{
 			jsonStructExpected: testComplexJson{
 				Name: "teste",
-				SubValue: FromValue(testSubComplex{
+				SubValue: Of(testSubComplex{
 					Age: 10,
 				}),
 			},
@@ -133,7 +133,7 @@ func TestJsonUnmarshal(t *testing.T) {
 		{
 			jsonStructExpected: testComplexJson{
 				Name:     "",
-				SubValue: EmtpyValue[testSubComplex](),
+				SubValue: Empty[testSubComplex](),
 			},
 			jsonStructEmpty: testComplexJson{},
 			jsonString:      `{"name":"","subValue":null}`,

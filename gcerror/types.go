@@ -1,4 +1,4 @@
-package gcerrors
+package gcerror
 
 import (
 	"context"

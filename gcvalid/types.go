@@ -1,7 +1,7 @@
-package gcvalidation
+package gcvalid
 
 import (
-	"github.com/Murilovisque/gocore/gcerrors"
+	"github.com/Murilovisque/gocore/gcerror"
 	"github.com/Murilovisque/gocore/gctxt"
 )
 
@@ -32,7 +32,7 @@ func (p RequestValidator) HasErrors() bool {
 
 func (p RequestValidator) ValidErrors() error {
 	if p.HasErrors() {
-		return gcerrors.NewErrWith(gcerrors.ErrBadRequest, p.msgs)
+		return gcerror.NewErrWith(gcerror.ErrBadRequest, p.msgs)
 	}
 	return nil
 }

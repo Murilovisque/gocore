@@ -1,4 +1,4 @@
-package gcoptional
+package gcopt
 
 var (
 	jsonNull = []byte("null")

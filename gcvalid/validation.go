@@ -1,4 +1,4 @@
-package gcvalidation
+package gcvalid
 
 import (
 	"cmp"
