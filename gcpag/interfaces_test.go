@@ -9,11 +9,11 @@ func (t testUserIdt) String() string {
 }
 
 type testUserModel struct {
-	Idt testUserIdt
+	idt testUserIdt
 }
 
-func (t testUserModel) OrderableIdt() testUserIdt {
-	return t.Idt
+func (t testUserModel) Idt() testUserIdt {
+	return t.idt
 }
 
 type testUsersPagination struct {

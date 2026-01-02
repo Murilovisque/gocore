@@ -26,7 +26,7 @@ type AnotherPageRequest[I IdtOrdered] struct {
 	// Field gcopt.Optional[Field]
 }
 
-type PaginatedResponse[I IdtOrdered, M ModelOrderable[I]] struct {
+type PaginatedResponse[I IdtOrdered, M Identifiable[I]] struct {
 	Items        []M
 	SelfPage     gcopt.Optional[AnotherPageRequest[I]]
 	NextPage     gcopt.Optional[AnotherPageRequest[I]]

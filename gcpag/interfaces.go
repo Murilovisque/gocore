@@ -8,8 +8,8 @@ type IdtOrdered interface {
 	// IsValid() bool
 }
 
-type ModelOrderable[T IdtOrdered] interface {
-	OrderableIdt() T
+type Identifiable[T IdtOrdered] interface {
+	Idt() T
 }
 
 type Field interface {

@@ -14,7 +14,7 @@ func TestPaginationResponseBuildHttpHeaderLink(t *testing.T) {
 	// no links
 	pg := PaginatedResponse[testUserIdt, testUserModel]{
 		Items: []testUserModel{
-			{Idt: 1},
+			{idt: 1},
 		},
 		Size: 2,
 	}
@@ -25,7 +25,7 @@ func TestPaginationResponseBuildHttpHeaderLink(t *testing.T) {
 
 	pg = PaginatedResponse[testUserIdt, testUserModel]{
 		Items: []testUserModel{
-			{Idt: 2},
+			{idt: 2},
 		},
 		Size: 1,
 		FirstPage: gcopt.Of(AnotherPageRequest[testUserIdt]{
@@ -73,11 +73,11 @@ func TestPaginationResponseBuildHttpHeaderLink(t *testing.T) {
 		return fmt.Sprintf("<%s>; rel=\"%s\"", u.String(), relation)
 	}
 	expected := []string{
-		generateUrl("/users", "first", httpFieldPageStartIdt, (pg.Items[0].Idt - 1).String(), pg.FirstPage.MustTake().Order.String(), pg.Size),
-		generateUrl("/users", "self", httpFieldPageStartIdt, (pg.Items[0].Idt).String(), pg.SelfPage.MustTake().Order.String(), pg.Size),
-		generateUrl("/users", "next", httpFieldPageAfterIdt, (pg.Items[0].Idt).String(), pg.NextPage.MustTake().Order.String(), pg.Size),
-		generateUrl("/users", "prev", httpFieldReversePageAfterIdt, (pg.Items[0].Idt).String(), pg.PreviousPage.MustTake().Order.String(), pg.Size),
-		generateUrl("/users", "last", httpFieldReversePageStartIdt, (pg.Items[0].Idt + 1).String(), pg.LastPage.MustTake().Order.String(), pg.Size),
+		generateUrl("/users", "first", httpFieldPageStartIdt, (pg.Items[0].Idt() - 1).String(), pg.FirstPage.MustTake().Order.String(), pg.Size),
+		generateUrl("/users", "self", httpFieldPageStartIdt, (pg.Items[0].Idt()).String(), pg.SelfPage.MustTake().Order.String(), pg.Size),
+		generateUrl("/users", "next", httpFieldPageAfterIdt, (pg.Items[0].Idt()).String(), pg.NextPage.MustTake().Order.String(), pg.Size),
+		generateUrl("/users", "prev", httpFieldReversePageAfterIdt, (pg.Items[0].Idt()).String(), pg.PreviousPage.MustTake().Order.String(), pg.Size),
+		generateUrl("/users", "last", httpFieldReversePageStartIdt, (pg.Items[0].Idt() + 1).String(), pg.LastPage.MustTake().Order.String(), pg.Size),
 	}
 	if !slices.Equal(result, expected) {
 		t.Fatalf("expected '%v' but '%v'", expected, result)

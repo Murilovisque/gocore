@@ -1,7 +1,6 @@
 package gcpag
 
 import (
-	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -51,16 +50,16 @@ func BuildHttpRequest[T IdtOrdered](req *http.Request, defaultOrder Order, defau
 	return p
 }
 
-func BuildResponse[T IdtOrdered, M ModelOrderable[T]](pageReq PaginatedRequest[T], itens []M, firstIdt, lastIdt T) PaginatedResponse[T, M] {
-	if firstIdt > lastIdt {
-		slog.Default().Warn("gcpag: last idt must be greather or equals to first idt", "first", firstIdt, "last", lastIdt)
-		itens = []M{}
-	}
+func BuildResponse[T IdtOrdered, M Identifiable[T]](pageReq PaginatedRequest[T], items []M, firstIdt, lastIdt T) PaginatedResponse[T, M] {
+	// if firstIdt > lastIdt {
+	// 	slog.Default().Warn("gcpag: last idt must be greather or equals to first idt", "first", firstIdt, "last", lastIdt)
+	// 	itens = []M{}
+	// }
 	pageRes := PaginatedResponse[T, M]{
-		Items: itens,
+		Items: items,
 		Size:  pageReq.Size,
 	}
-	if len(itens) == 0 {
+	if len(items) == 0 {
 		return pageRes
 	}
 	pageRes.FirstPage = gcopt.Of(AnotherPageRequest[T]{
@@ -75,26 +74,26 @@ func BuildResponse[T IdtOrdered, M ModelOrderable[T]](pageReq PaginatedRequest[T
 		Order:         pageReq.Order,
 		Orientation:   pageReq.Orientation.Reverse(),
 	})
-	initalItem := itens[0]
-	if initalItem.OrderableIdt() > firstIdt {
+	initalItem := items[0]
+	if initalItem.Idt() > firstIdt {
 		pageRes.PreviousPage = gcopt.Of(AnotherPageRequest[T]{
-			Idt:           initalItem.OrderableIdt(),
+			Idt:           initalItem.Idt(),
 			StartPosition: AfterAt,
 			Order:         pageReq.Order,
 			Orientation:   pageReq.Orientation.Reverse(),
 		})
 	}
-	lastItem := itens[len(itens)-1]
-	if lastItem.OrderableIdt() < lastIdt {
+	lastItem := items[len(items)-1]
+	if lastItem.Idt() < lastIdt {
 		pageRes.NextPage = gcopt.Of(AnotherPageRequest[T]{
-			Idt:           lastItem.OrderableIdt(),
+			Idt:           lastItem.Idt(),
 			StartPosition: AfterAt,
 			Order:         pageReq.Order,
 			Orientation:   pageReq.Orientation,
 		})
 	}
 	pageRes.SelfPage = gcopt.Of(AnotherPageRequest[T]{
-		Idt:           itens[0].OrderableIdt(),
+		Idt:           items[0].Idt(),
 		StartPosition: StartAt,
 		Order:         pageReq.Order,
 		Orientation:   pageReq.Orientation,
