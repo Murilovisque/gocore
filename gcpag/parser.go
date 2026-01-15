@@ -10,5 +10,5 @@ func StringToOrder(vl string) (Order, error) {
 	if o.IsValid() {
 		return o, nil
 	}
-	return o, fmt.Errorf("invalid order value '%s'", vl)
+	return o, fmt.Errorf("gcpag: invalid order value '%s'", vl)
 }

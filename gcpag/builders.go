@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Murilovisque/gocore/gcid"
 	"github.com/Murilovisque/gocore/gcopt"
 )
 
-func BuildHttpRequest[T IdtOrdered](req *http.Request, defaultOrder Order, defaultSize int, fnIdtParser func(string) (T, bool)) PaginatedRequest[T] {
+func BuildByHttpRequest[T gcid.IdtOrdered](req *http.Request, defaultOrder Order, defaultSize int, fnIdtParser func(string) (T, bool)) PaginatedRequest[T] {
 	q := req.URL.Query()
 	size, err := strconv.Atoi(q.Get(httpFieldPageSize))
 	if size < 1 || err != nil {
@@ -50,7 +51,7 @@ func BuildHttpRequest[T IdtOrdered](req *http.Request, defaultOrder Order, defau
 	return p
 }
 
-func BuildResponse[T IdtOrdered, M Identifiable[T]](pageReq PaginatedRequest[T], items []M, firstIdt, lastIdt T) PaginatedResponse[T, M] {
+func BuildResponse[T gcid.IdtOrdered, M gcid.Identifiable[T]](pageReq PaginatedRequest[T], items []M, firstIdt, lastIdt T) PaginatedResponse[T, M] {
 	// if firstIdt > lastIdt {
 	// 	slog.Default().Warn("gcpag: last idt must be greather or equals to first idt", "first", firstIdt, "last", lastIdt)
 	// 	itens = []M{}

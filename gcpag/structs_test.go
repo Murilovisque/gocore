@@ -18,7 +18,10 @@ func TestPaginationResponseBuildHttpHeaderLink(t *testing.T) {
 		},
 		Size: 2,
 	}
-	result := pg.BuildHttpHeaderLinkValues("/users")
+	result, err := pg.BuildHttpHeaderLinkValues("/users")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(result) > 0 {
 		t.Fatalf("expected empty but '%s'", result)
 	}
@@ -59,7 +62,10 @@ func TestPaginationResponseBuildHttpHeaderLink(t *testing.T) {
 			Orientation:   PreviousPage,
 		}),
 	}
-	result = pg.BuildHttpHeaderLinkValues("/users")
+	result, err = pg.BuildHttpHeaderLinkValues("/users")
+	if err != nil {
+		t.Fatal(err)
+	}
 	generateUrl := func(path, relation, field, idt, order string, size int) string {
 		u, err := url.Parse(path)
 		if err != nil {
@@ -101,4 +107,22 @@ func TestPaginationResponseBuildHttpHeaderLink(t *testing.T) {
 // 	if p.StartPosition != AfterAt {
 // 		t.Fatalf("expected '%d', but '%d'", AfterAt, p.StartPosition)
 // 	}
+// }
+
+type testUserIdt int
+
+func (t testUserIdt) String() string {
+	return strconv.Itoa(int(t))
+}
+
+type testUserModel struct {
+	idt testUserIdt
+}
+
+func (t testUserModel) Idt() testUserIdt {
+	return t.idt
+}
+
+// type testUsersPagination struct {
+// 	PaginatedRequest[testUserIdt]
 // }
