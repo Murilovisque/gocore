@@ -26,8 +26,18 @@ type AnotherPageRequest[I gcid.IdtOrdered] struct {
 	// Field gcopt.Optional[Field]
 }
 
-type PaginatedResponse[I gcid.IdtOrdered, M gcid.Identifiable[I]] struct {
-	Items        []M
+func (a AnotherPageRequest[I]) ToPageRequest(size int) PaginatedRequest[I] {
+	return PaginatedRequest[I]{
+		Idt:           gcopt.Of(a.Idt),
+		StartPosition: a.StartPosition,
+		Order:         a.Order,
+		Orientation:   a.Orientation,
+		Size:          size,
+	}
+}
+
+type PaginatedResponse[I gcid.IdtOrdered, E gcid.Identifiable[I]] struct {
+	Items        []E
 	SelfPage     gcopt.Optional[AnotherPageRequest[I]]
 	NextPage     gcopt.Optional[AnotherPageRequest[I]]
 	PreviousPage gcopt.Optional[AnotherPageRequest[I]]
@@ -36,7 +46,7 @@ type PaginatedResponse[I gcid.IdtOrdered, M gcid.Identifiable[I]] struct {
 	Size         int
 }
 
-func (pageRes PaginatedResponse[I, M]) BuildHttpHeaderLinkValues(relativePath string) ([]string, error) {
+func (pageRes PaginatedResponse[I, E]) BuildHttpHeaderLinkValues(relativePath string) ([]string, error) {
 	links := make([]string, 0, 5)
 	addLink := func(page gcopt.Optional[AnotherPageRequest[I]], relation, fieldStartIdt, fieldAfterIdt string) error {
 		anotherPage, ok := page.Take()

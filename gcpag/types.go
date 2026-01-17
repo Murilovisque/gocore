@@ -1,9 +1,5 @@
 package gcpag
 
-import (
-	"log/slog"
-)
-
 type StartPosition int
 
 func (sp StartPosition) IsValid() bool {
@@ -21,7 +17,7 @@ func (sp StartPosition) String() string {
 	}
 }
 
-type Order string
+type Order int
 
 func (o Order) Reverse() Order {
 	switch o {
@@ -30,7 +26,6 @@ func (o Order) Reverse() Order {
 	case Desc:
 		return Asc
 	default:
-		slog.Default().Warn("gcpag: invalid page order, reverse failed", "invalidOrder", o)
 		return o
 	}
 }
@@ -40,7 +35,14 @@ func (o Order) IsValid() bool {
 }
 
 func (o Order) String() string {
-	return string(o)
+	switch o {
+	case Asc:
+		return "asc"
+	case Desc:
+		return "desc"
+	default:
+		return ""
+	}
 }
 
 type Orientation int
@@ -52,7 +54,6 @@ func (o Orientation) Reverse() Orientation {
 	case PreviousPage:
 		return NextPage
 	default:
-		slog.Default().Warn("gcpag: invalid page orientation, reverse failed", "invalidOrder", o)
 		return o
 	}
 }

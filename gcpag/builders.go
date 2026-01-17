@@ -51,54 +51,60 @@ func BuildByHttpRequest[T gcid.IdtOrdered](req *http.Request, defaultOrder Order
 	return p
 }
 
-func BuildResponse[T gcid.IdtOrdered, M gcid.Identifiable[T]](pageReq PaginatedRequest[T], items []M, firstIdt, lastIdt T) PaginatedResponse[T, M] {
-	// if firstIdt > lastIdt {
-	// 	slog.Default().Warn("gcpag: last idt must be greather or equals to first idt", "first", firstIdt, "last", lastIdt)
-	// 	itens = []M{}
-	// }
-	pageRes := PaginatedResponse[T, M]{
+func BuildResponse[I gcid.IdtOrdered, E gcid.Identifiable[I]](pageReq PaginatedRequest[I], items []E, firstIdt, lastIdt gcopt.Optional[I]) PaginatedResponse[I, E] {
+	pageRes := PaginatedResponse[I, E]{
 		Items: items,
 		Size:  pageReq.Size,
 	}
-	if len(items) == 0 {
-		return pageRes
+	if pageReq.Order == Desc {
+		firstIdt, lastIdt = lastIdt, firstIdt
 	}
-	pageRes.FirstPage = gcopt.Of(AnotherPageRequest[T]{
-		Idt:           firstIdt,
-		StartPosition: StartAt,
-		Order:         pageReq.Order,
-		Orientation:   pageReq.Orientation,
-	})
-	pageRes.LastPage = gcopt.Of(AnotherPageRequest[T]{
-		Idt:           lastIdt,
-		StartPosition: StartAt,
-		Order:         pageReq.Order,
-		Orientation:   pageReq.Orientation.Reverse(),
-	})
-	initalItem := items[0]
-	if initalItem.Idt() > firstIdt {
-		pageRes.PreviousPage = gcopt.Of(AnotherPageRequest[T]{
-			Idt:           initalItem.Idt(),
-			StartPosition: AfterAt,
+	hasItems := len(items) > 0
+	if fi, ok := firstIdt.Take(); ok {
+		pageRes.FirstPage = gcopt.Of(AnotherPageRequest[I]{
+			Idt:           fi,
+			StartPosition: StartAt,
 			Order:         pageReq.Order,
-			Orientation:   pageReq.Orientation.Reverse(),
+			Orientation:   NextPage,
 		})
+		if hasItems {
+			initialItem := items[0]
+			if (pageReq.Order == Asc && initialItem.Idt() > fi) || (pageReq.Order == Desc && initialItem.Idt() < fi) {
+				pageRes.PreviousPage = gcopt.Of(AnotherPageRequest[I]{
+					Idt:           initialItem.Idt(),
+					StartPosition: AfterAt,
+					Order:         pageReq.Order,
+					Orientation:   PreviousPage,
+				})
+			}
+		}
 	}
-	lastItem := items[len(items)-1]
-	if lastItem.Idt() < lastIdt {
-		pageRes.NextPage = gcopt.Of(AnotherPageRequest[T]{
-			Idt:           lastItem.Idt(),
-			StartPosition: AfterAt,
+	if li, ok := lastIdt.Take(); ok {
+		pageRes.LastPage = gcopt.Of(AnotherPageRequest[I]{
+			Idt:           li,
+			StartPosition: StartAt,
+			Order:         pageReq.Order,
+			Orientation:   PreviousPage,
+		})
+		if hasItems {
+			lastItem := items[len(items)-1]
+			if (pageReq.Order == Asc && lastItem.Idt() < li) || (pageReq.Order == Desc && lastItem.Idt() > li) {
+				pageRes.NextPage = gcopt.Of(AnotherPageRequest[I]{
+					Idt:           lastItem.Idt(),
+					StartPosition: AfterAt,
+					Order:         pageReq.Order,
+					Orientation:   NextPage,
+				})
+			}
+		}
+	}
+	if hasItems {
+		pageRes.SelfPage = gcopt.Of(AnotherPageRequest[I]{
+			Idt:           items[0].Idt(),
+			StartPosition: StartAt,
 			Order:         pageReq.Order,
 			Orientation:   pageReq.Orientation,
 		})
 	}
-	pageRes.SelfPage = gcopt.Of(AnotherPageRequest[T]{
-		Idt:           items[0].Idt(),
-		StartPosition: StartAt,
-		Order:         pageReq.Order,
-		Orientation:   pageReq.Orientation,
-	})
-
 	return pageRes
 }

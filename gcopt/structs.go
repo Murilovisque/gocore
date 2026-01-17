@@ -2,6 +2,8 @@ package gcopt
 
 import (
 	"bytes"
+	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 )
@@ -69,6 +71,8 @@ func (o Optional[T]) Filter(predicate func(T) bool) Optional[T] {
 	return Optional[T]{exists: false}
 }
 
+// json interface
+
 func (o Optional[T]) MarshalJSON() ([]byte, error) {
 	if !o.exists {
 		return jsonNull, nil
@@ -89,9 +93,28 @@ func (o *Optional[T]) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// string interface
 func (o Optional[T]) String() string {
 	if !o.exists {
 		return "Optional.Empty"
 	}
 	return fmt.Sprintf("Optional[%v]", o.value)
+}
+
+// SQL interfaces
+func (o *Optional[T]) Scan(value any) error {
+	var nt sql.Null[T]
+	if err := nt.Scan(value); err != nil {
+		return err
+	}
+	o.value = nt.V
+	o.exists = nt.Valid
+	return nil
+}
+
+func (o Optional[T]) Value() (driver.Value, error) {
+	if !o.exists {
+		return nil, nil
+	}
+	return o.value, nil
 }

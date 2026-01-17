@@ -16,6 +16,7 @@ type SqlTxResource interface {
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }
+
 type SqlExecutor interface {
 	Exec(ctx context.Context, sql string, args ...any) (SqlResult, error)
 	Query(ctx context.Context, sql string, args ...any) (SqlRows, error)

@@ -6,8 +6,8 @@ const (
 )
 
 const (
-	Asc  Order = "asc"
-	Desc Order = "desc"
+	Asc  Order = iota
+	Desc Order = iota
 )
 
 const (
