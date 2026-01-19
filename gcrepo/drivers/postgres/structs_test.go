@@ -11,7 +11,7 @@ import (
 
 	"github.com/Murilovisque/gocore/gcopt"
 	"github.com/Murilovisque/gocore/gcpag"
-	"github.com/Murilovisque/gocore/gcr"
+	"github.com/Murilovisque/gocore/gcrepo"
 )
 
 func TestPostgresIntegration(t *testing.T) {
@@ -66,19 +66,19 @@ func TestPostgresIntegration(t *testing.T) {
 		}
 		const pageSize = 2
 		testPage := func(pageReq gcpag.PaginatedRequest[testUserIdt], skipNames, exptItemsSize int) gcpag.PaginatedResponse[testUserIdt, testUserModel] {
-			reqArg := gcr.QueryPaginatedRequest[testUserIdt, testUserModel]{
-				ConverterQueryItems: func(row gcr.SqlRow) (m testUserModel, err error) {
+			reqArg := gcrepo.QueryPaginatedRequest[testUserIdt, testUserModel]{
+				ConverterQueryItems: func(row gcrepo.SqlRow) (m testUserModel, err error) {
 					err = row.Scan(&m.idt, &m.name)
 					return
 				},
 				QueryFirstLastIdts:     "select min(id), max(id) from test_users WHERE name like $1",
 				ArgsQueryFirstLastIdts: []any{"B%"},
-				ConverterQueryFirstLastIdts: func(row gcr.SqlRow) (firstIdt, lastIdt gcopt.Optional[testUserIdt], err error) {
+				ConverterQueryFirstLastIdts: func(row gcrepo.SqlRow) (firstIdt, lastIdt gcopt.Optional[testUserIdt], err error) {
 					err = row.Scan(&firstIdt, &lastIdt)
 					return
 				},
 			}
-			idtPag := gcr.BuildPagingCriteria(pageReq, "id", "$2")
+			idtPag := gcrepo.BuildPagingCriteria(pageReq, "id", "$2")
 			if idtPag.IsValidIdt {
 				reqArg.QueryItems = fmt.Sprintf("SELECT id, name FROM test_users WHERE name like $1 and %s order by %s limit $3", idtPag.Filter, idtPag.OrderBy)
 				reqArg.ArgsQueryItems = []any{"B%", idtPag.Idt, pageReq.Size}
@@ -87,7 +87,7 @@ func TestPostgresIntegration(t *testing.T) {
 				reqArg.ArgsQueryItems = []any{"B%", pageReq.Size}
 			}
 			t.Logf("query itens: %s - args: %v", reqArg.QueryItems, reqArg.ArgsQueryItems)
-			response, err := gcr.QueryPaginated(t.Context(), exec, pageReq, reqArg)
+			response, err := gcrepo.QueryPaginated(t.Context(), exec, pageReq, reqArg)
 			t.Logf("response %v", response)
 			if err != nil {
 				t.Fatal(err)
@@ -207,7 +207,7 @@ func TestPostgresIntegration(t *testing.T) {
 	t.Run("SyntaxAndRows", func(t *testing.T) {
 		const expectedLimit = 2
 		var expectedNames = []any{"zulu", "zé", "zacarias"}
-		sql := fmt.Sprintf("INSERT INTO test_users (name) VALUES (%s), (%s), (%s)", gcr.PlaceHolderRange(exec.Syntax(), 1, 4)...)
+		sql := fmt.Sprintf("INSERT INTO test_users (name) VALUES (%s), (%s), (%s)", gcrepo.PlaceHolderRange(exec.Syntax(), 1, 4)...)
 		_, err := exec.Exec(ctx, sql, expectedNames...)
 		if err != nil {
 			t.Errorf("erro no insert: %v", err)

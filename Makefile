@@ -5,6 +5,6 @@ test:
 	go test -v ./...
 
 test-postgres:
-	$(MAKE) -C gcr/drivers/postgres test
+	$(MAKE) -C gcrepo/drivers/postgres test
 
 test-all: test test-postgres

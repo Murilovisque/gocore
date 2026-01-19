@@ -1,4 +1,4 @@
-module github.com/Murilovisque/gocore/gcr/drivers/postgres
+module github.com/Murilovisque/gocore/gcrepo/drivers/postgres
 
 go 1.25.5
 

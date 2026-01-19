@@ -1,4 +1,4 @@
-package gcr
+package gcrepo
 
 import (
 	"context"
@@ -75,19 +75,19 @@ func QueryPaginated[I gcid.IdtOrdered, E gcid.Identifiable[I]](ctx context.Conte
 	var res gcpag.PaginatedResponse[I, E]
 	rowsItens, err := executor.Query(ctx, req.QueryItems, req.ArgsQueryItems...)
 	if err != nil {
-		return res, fmt.Errorf("gcr: query itens paginated failed. Cause %w", err)
+		return res, fmt.Errorf("gcrepo: query itens paginated failed. Cause %w", err)
 	}
 	defer rowsItens.Close()
 	var items []E
 	for rowsItens.Next() {
 		m, err := req.ConverterQueryItems(rowsItens)
 		if err != nil {
-			return res, fmt.Errorf("gcr: convert item of the rows failed. Cause %w", err)
+			return res, fmt.Errorf("gcrepo: convert item of the rows failed. Cause %w", err)
 		}
 		items = append(items, m)
 	}
 	if err = rowsItens.Err(); err != nil {
-		return res, fmt.Errorf("gcr: convert item after rows iteration failed. Cause %w", err)
+		return res, fmt.Errorf("gcrepo: convert item after rows iteration failed. Cause %w", err)
 	}
 	if pagReq.Orientation == gcpag.PreviousPage {
 		slices.Reverse(items)
@@ -95,7 +95,7 @@ func QueryPaginated[I gcid.IdtOrdered, E gcid.Identifiable[I]](ctx context.Conte
 	rowFirstLast := executor.QueryRow(ctx, req.QueryFirstLastIdts, req.ArgsQueryFirstLastIdts...)
 	minIdt, maxIdt, err := req.ConverterQueryFirstLastIdts(rowFirstLast)
 	if err != nil {
-		return res, fmt.Errorf("gcr: convert first last idt failed. Cause %w", err)
+		return res, fmt.Errorf("gcrepo: convert first last idt failed. Cause %w", err)
 	}
 	return gcpag.BuildResponse(pagReq, items, minIdt, maxIdt), nil
 }

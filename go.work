@@ -2,6 +2,6 @@ go 1.25.5
 
 use (
 	.
-	./gcr
-	./gcr/drivers/postgres
+	./gcrepo
+	./gcrepo/drivers/postgres
 )

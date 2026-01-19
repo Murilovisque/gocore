@@ -1,4 +1,4 @@
-package gcr
+package gcrepo
 
 import (
 	"context"
