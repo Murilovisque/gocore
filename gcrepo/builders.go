@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/Murilovisque/gocore/gcid"
+	"github.com/Murilovisque/gocore/gcfield"
 	"github.com/Murilovisque/gocore/gcpag"
 )
 
@@ -17,7 +17,7 @@ func PlaceHolderRange(s SqlSyntax, startAt, stopBefore int) []any {
 	return phs
 }
 
-func BuildPagingCriteria[I gcid.IdtOrdered](pagReq gcpag.PaginatedRequest[I], idtSqlField, idtPlaceHolder string) PagingCriteria[I] {
+func BuildPagingCriteria[I gcfield.IdtOrdered](pagReq gcpag.PaginatedRequest[I], idtSqlField, idtPlaceHolder string) PagingCriteria[I] {
 	idtValue, ok := pagReq.Idt.Take()
 	if !ok {
 		return PagingCriteria[I]{
@@ -71,7 +71,7 @@ func BuildPagingCriteria[I gcid.IdtOrdered](pagReq gcpag.PaginatedRequest[I], id
 	}
 }
 
-func QueryPaginated[I gcid.IdtOrdered, E gcid.Identifiable[I]](ctx context.Context, executor SqlExecutor, pagReq gcpag.PaginatedRequest[I], req QueryPaginatedRequest[I, E]) (gcpag.PaginatedResponse[I, E], error) {
+func QueryPaginated[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](ctx context.Context, executor SqlExecutor, pagReq gcpag.PaginatedRequest[I], req QueryPaginatedRequest[I, E]) (gcpag.PaginatedResponse[I, E], error) {
 	var res gcpag.PaginatedResponse[I, E]
 	rowsItens, err := executor.Query(ctx, req.QueryItems, req.ArgsQueryItems...)
 	if err != nil {

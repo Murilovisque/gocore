@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Murilovisque/gocore/gcid"
+	"github.com/Murilovisque/gocore/gcfield"
 	"github.com/Murilovisque/gocore/gcopt"
 )
 
-func BuildByHttpRequest[T gcid.IdtOrdered](req *http.Request, defaultOrder Order, defaultSize int, fnIdtParser func(string) (T, bool)) PaginatedRequest[T] {
+func BuildRequestFromHttp[T gcfield.IdtOrdered](req *http.Request, defaultOrder Order, defaultSize int, fnIdtParser func(string) (T, bool)) PaginatedRequest[T] {
 	q := req.URL.Query()
 	size, err := strconv.Atoi(q.Get(httpFieldPageSize))
 	if size < 1 || err != nil {
@@ -29,11 +29,6 @@ func BuildByHttpRequest[T gcid.IdtOrdered](req *http.Request, defaultOrder Order
 		p.Idt = gcopt.Of(idt)
 		p.StartPosition = AfterAt
 		p.Orientation = NextPage
-		// } else if idt, valid = idtConverter(q.Get(httpFieldPageBeforeIdt)); valid {
-		// 	p.Idt = gcopt.Of(idt)
-		// 	p.StartPosition = AfterAt
-		// 	p.Orientation = PreviousPage
-		// 	p.Order = Asc
 	} else if idt, valid = fnIdtParser(q.Get(httpFieldReversePageStartIdt)); valid {
 		p.Idt = gcopt.Of(idt)
 		p.StartPosition = StartAt
@@ -42,16 +37,11 @@ func BuildByHttpRequest[T gcid.IdtOrdered](req *http.Request, defaultOrder Order
 		p.Idt = gcopt.Of(idt)
 		p.StartPosition = AfterAt
 		p.Orientation = NextPage
-		// } else if idt, valid = idtConverter(q.Get(httpFieldReversePageBeforeIdt)); valid {
-		// 	p.Idt = gcopt.Of(idt)
-		// 	p.StartPosition = AfterAt
-		// 	p.Orientation = PreviousPage
-		// 	p.Order = Desc
 	}
 	return p
 }
 
-func BuildResponse[I gcid.IdtOrdered, E gcid.Identifiable[I]](pageReq PaginatedRequest[I], items []E, firstIdt, lastIdt gcopt.Optional[I]) PaginatedResponse[I, E] {
+func BuildResponse[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](pageReq PaginatedRequest[I], items []E, firstIdt, lastIdt gcopt.Optional[I]) PaginatedResponse[I, E] {
 	pageRes := PaginatedResponse[I, E]{
 		Items: items,
 		Size:  pageReq.Size,

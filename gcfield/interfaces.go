@@ -1,4 +1,4 @@
-package gcid
+package gcfield
 
 import "cmp"
 

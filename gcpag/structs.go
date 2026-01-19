@@ -5,11 +5,11 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/Murilovisque/gocore/gcid"
+	"github.com/Murilovisque/gocore/gcfield"
 	"github.com/Murilovisque/gocore/gcopt"
 )
 
-type PaginatedRequest[I gcid.IdtOrdered] struct {
+type PaginatedRequest[I gcfield.IdtOrdered] struct {
 	Idt           gcopt.Optional[I]
 	StartPosition StartPosition
 	Order         Order
@@ -18,7 +18,7 @@ type PaginatedRequest[I gcid.IdtOrdered] struct {
 	// Field gcopt.Optional[Field]
 }
 
-type AnotherPageRequest[I gcid.IdtOrdered] struct {
+type AnotherPageRequest[I gcfield.IdtOrdered] struct {
 	Idt           I
 	StartPosition StartPosition
 	Order         Order
@@ -36,7 +36,7 @@ func (a AnotherPageRequest[I]) ToPageRequest(size int) PaginatedRequest[I] {
 	}
 }
 
-type PaginatedResponse[I gcid.IdtOrdered, E gcid.Identifiable[I]] struct {
+type PaginatedResponse[I gcfield.IdtOrdered, E gcfield.Identifiable[I]] struct {
 	Items        []E
 	SelfPage     gcopt.Optional[AnotherPageRequest[I]]
 	NextPage     gcopt.Optional[AnotherPageRequest[I]]
