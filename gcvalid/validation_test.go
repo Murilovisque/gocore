@@ -7,7 +7,7 @@ import (
 )
 
 func TestEmailValidation(t *testing.T) {
-	validator := EmailValidation(gctxt.Build("campo", nil))
+	validator := EmailValidation(gctxt.New("campo", nil))
 	testArgs := []struct {
 		email string
 		valid bool
@@ -32,7 +32,7 @@ func TestEmailValidation(t *testing.T) {
 }
 
 func TestGreaterThanValidation(t *testing.T) {
-	validator := GreaterThanValidation(gctxt.Build("campo", nil), 10)
+	validator := GreaterThanValidation(gctxt.New("campo", nil), 10)
 	testArgs := []struct {
 		value int
 		valid bool
@@ -50,7 +50,7 @@ func TestGreaterThanValidation(t *testing.T) {
 }
 
 func TestGreaterOrEqualValidation(t *testing.T) {
-	validator := GreaterOrEqualValidation(gctxt.Build("campo", nil), 10)
+	validator := GreaterOrEqualValidation(gctxt.New("campo", nil), 10)
 	testArgs := []struct {
 		value int
 		valid bool
@@ -68,7 +68,7 @@ func TestGreaterOrEqualValidation(t *testing.T) {
 }
 
 func TestLessThanValidation(t *testing.T) {
-	validator := LessThanValidation(gctxt.Build("campo", nil), 10)
+	validator := LessThanValidation(gctxt.New("campo", nil), 10)
 	testArgs := []struct {
 		value int
 		valid bool
@@ -86,7 +86,7 @@ func TestLessThanValidation(t *testing.T) {
 }
 
 func TestLessOrEqualValidation(t *testing.T) {
-	validator := LessOrEqualValidation(gctxt.Build("campo", nil), 10)
+	validator := LessOrEqualValidation(gctxt.New("campo", nil), 10)
 	testArgs := []struct {
 		value int
 		valid bool
@@ -104,7 +104,7 @@ func TestLessOrEqualValidation(t *testing.T) {
 }
 
 func TestBetweenInclusiveValidation(t *testing.T) {
-	validator := BetweenInclusiveValidation(gctxt.Build("campo", nil), 9, 11)
+	validator := BetweenInclusiveValidation(gctxt.New("campo", nil), 9, 11)
 	testArgs := []struct {
 		value int
 		valid bool
@@ -124,7 +124,7 @@ func TestBetweenInclusiveValidation(t *testing.T) {
 }
 
 func TestBetweenValidation(t *testing.T) {
-	validator := BetweenValidation(gctxt.Build("campo", nil), 9, 11)
+	validator := BetweenValidation(gctxt.New("campo", nil), 9, 11)
 	testArgs := []struct {
 		value int
 		valid bool

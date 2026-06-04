@@ -1,8 +1,8 @@
 package gctxt
 
 const (
-	LangBrazil  Language = iota
-	LangEnglish Language = iota
+	LangBrazil Language = iota
+	LangEnglish
 )
 
 var (

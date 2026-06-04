@@ -11,7 +11,7 @@ import (
 func TestErrors(t *testing.T) {
 	gctxt.DefaultLang = gctxt.LangBrazil
 	expectedDetails := []string{"Mensagem"}
-	err := NewErrWith(ErrBadRequest, gctxt.BuildList(expectedDetails, nil))
+	err := NewErrWith(ErrBadRequest, gctxt.NewList(expectedDetails, nil))
 
 	if err.GeneralError() != ErrBadRequest.GeneralError() {
 		t.Fatalf("expected '%s', but '%s", ErrBadRequest.GeneralError(), err.GeneralError())

@@ -2,26 +2,28 @@ package gcpag
 
 const (
 	AfterAt StartPosition = iota
-	StartAt StartPosition = iota
+	StartAt
 )
 
 const (
-	Asc  Order = iota
-	Desc Order = iota
+	Asc Order = iota
+	Desc
 )
 
 const (
-	NextPage     Orientation = iota
-	PreviousPage Orientation = iota
+	NextPage Orientation = iota
+	PreviousPage
 )
 
 const (
-	httpFieldPageSize  = "page-size"
-	httpFieldPageOrder = "page-order"
-	// httpFieldPageBeforeIdt        = "page-before-idt"
-	httpFieldPageStartIdt        = "page-start-idt"
-	httpFieldPageAfterIdt        = "page-after-idt"
-	httpFieldReversePageStartIdt = "reverse-page-start-idt"
-	httpFieldReversePageAfterIdt = "reverse-page-after-idt"
-	// httpFieldReversePageBeforeIdt = "reverse-page-before-idt"
+	httpParamPageSize            = "page-size"
+	httpParamPageField           = "page-field-"
+	httpParamPageOrder           = "page-order"
+	httpParamPageStartIdt        = "page-start-idt"
+	httpParamPageAfterIdt        = "page-after-idt"
+	httpParamReversePageStartIdt = "reverse-page-start-idt"
+	httpParamReversePageAfterIdt = "reverse-page-after-idt"
 )
+
+// httpParamPageBeforeIdt        = "page-before-idt"
+// httpFieldReversePageBeforeIdt = "reverse-page-before-idt"

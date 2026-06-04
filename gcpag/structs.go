@@ -15,7 +15,7 @@ type PaginatedRequest[I gcfield.IdtOrdered] struct {
 	Order         Order
 	Orientation   Orientation
 	Size          int
-	// Field gcopt.Optional[Field]
+	Field         gcopt.Optional[gcfield.FieldParser]
 }
 
 type AnotherPageRequest[I gcfield.IdtOrdered] struct {
@@ -23,17 +23,6 @@ type AnotherPageRequest[I gcfield.IdtOrdered] struct {
 	StartPosition StartPosition
 	Order         Order
 	Orientation   Orientation
-	// Field gcopt.Optional[Field]
-}
-
-func (a AnotherPageRequest[I]) ToPageRequest(size int) PaginatedRequest[I] {
-	return PaginatedRequest[I]{
-		Idt:           gcopt.Of(a.Idt),
-		StartPosition: a.StartPosition,
-		Order:         a.Order,
-		Orientation:   a.Orientation,
-		Size:          size,
-	}
 }
 
 type PaginatedResponse[I gcfield.IdtOrdered, E gcfield.Identifiable[I]] struct {
@@ -44,9 +33,10 @@ type PaginatedResponse[I gcfield.IdtOrdered, E gcfield.Identifiable[I]] struct {
 	FirstPage    gcopt.Optional[AnotherPageRequest[I]]
 	LastPage     gcopt.Optional[AnotherPageRequest[I]]
 	Size         int
+	Field        gcopt.Optional[gcfield.FieldParser]
 }
 
-func (pageRes PaginatedResponse[I, E]) BuildHttpHeaderLinkValues(relativePath string) ([]string, error) {
+func (pageRes PaginatedResponse[I, E]) ParseHttpHeaderLinkValues(relativePath string) ([]string, error) {
 	links := make([]string, 0, 5)
 	addLink := func(page gcopt.Optional[AnotherPageRequest[I]], relation, fieldStartIdt, fieldAfterIdt string) error {
 		anotherPage, ok := page.Take()
@@ -55,7 +45,7 @@ func (pageRes PaginatedResponse[I, E]) BuildHttpHeaderLinkValues(relativePath st
 		}
 		u, err := url.Parse(relativePath)
 		if err != nil {
-			return fmt.Errorf("gcpag: invalid relative path '%s', http header releted link build failed. Cause %w", relativePath, err)
+			return fmt.Errorf("gcpag: invalid relative path '%s', http header related link build failed. Cause %w", relativePath, err)
 		}
 		q := u.Query()
 		switch anotherPage.StartPosition {
@@ -64,29 +54,67 @@ func (pageRes PaginatedResponse[I, E]) BuildHttpHeaderLinkValues(relativePath st
 		case AfterAt:
 			q.Set(fieldAfterIdt, anotherPage.Idt.String())
 		default:
-			return fmt.Errorf("gcpag: invalid start position '%s', http header releted link build failed. Cause %w", anotherPage.StartPosition, err)
+			return fmt.Errorf("gcpag: invalid start position '%s', http header related link build failed. Cause %w", anotherPage.StartPosition, err)
 		}
-		q.Set(httpFieldPageSize, strconv.Itoa(pageRes.Size))
-		q.Set(httpFieldPageOrder, anotherPage.Order.String())
+		q.Set(httpParamPageSize, strconv.Itoa(pageRes.Size))
+		q.Set(httpParamPageOrder, anotherPage.Order.String())
+		if f, ok := pageRes.Field.Take(); ok && f.IsValid() {
+			q.Set(httpParamPageField+f.Name(), f.String())
+		}
 		u.RawQuery = q.Encode()
 		links = append(links, []string{fmt.Sprintf("<%s>; rel=\"%s\"", u.String(), relation)}...)
 		return nil
 	}
 	var err error
-	if err = addLink(pageRes.FirstPage, "first", httpFieldPageStartIdt, httpFieldPageAfterIdt); err != nil {
+	if err = addLink(pageRes.FirstPage, "first", httpParamPageStartIdt, httpParamPageAfterIdt); err != nil {
 		return nil, err
 	}
-	if err = addLink(pageRes.SelfPage, "self", httpFieldPageStartIdt, httpFieldPageAfterIdt); err != nil {
+	if err = addLink(pageRes.SelfPage, "self", httpParamPageStartIdt, httpParamPageAfterIdt); err != nil {
 		return nil, err
 	}
-	if err = addLink(pageRes.NextPage, "next", httpFieldPageStartIdt, httpFieldPageAfterIdt); err != nil {
+	if err = addLink(pageRes.NextPage, "next", httpParamPageStartIdt, httpParamPageAfterIdt); err != nil {
 		return nil, err
 	}
-	if err = addLink(pageRes.PreviousPage, "prev", httpFieldReversePageStartIdt, httpFieldReversePageAfterIdt); err != nil {
+	if err = addLink(pageRes.PreviousPage, "prev", httpParamReversePageStartIdt, httpParamReversePageAfterIdt); err != nil {
 		return nil, err
 	}
-	if err = addLink(pageRes.LastPage, "last", httpFieldReversePageStartIdt, httpFieldReversePageAfterIdt); err != nil {
+	if err = addLink(pageRes.LastPage, "last", httpParamReversePageStartIdt, httpParamReversePageAfterIdt); err != nil {
 		return nil, err
 	}
 	return links, nil
+}
+
+func (pageRes PaginatedResponse[I, E]) SelfPageAsRequest() gcopt.Optional[PaginatedRequest[I]] {
+	return pageRes.pageAsRequest(pageRes.SelfPage)
+}
+
+func (pageRes PaginatedResponse[I, E]) FirstPageAsRequest() gcopt.Optional[PaginatedRequest[I]] {
+	return pageRes.pageAsRequest(pageRes.FirstPage)
+}
+
+func (pageRes PaginatedResponse[I, E]) LastPageAsRequest() gcopt.Optional[PaginatedRequest[I]] {
+	return pageRes.pageAsRequest(pageRes.LastPage)
+}
+
+func (pageRes PaginatedResponse[I, E]) NextPageAsRequest() gcopt.Optional[PaginatedRequest[I]] {
+	return pageRes.pageAsRequest(pageRes.NextPage)
+}
+
+func (pageRes PaginatedResponse[I, E]) PreviousPageAsRequest() gcopt.Optional[PaginatedRequest[I]] {
+	return pageRes.pageAsRequest(pageRes.PreviousPage)
+}
+
+func (pageRes PaginatedResponse[I, E]) pageAsRequest(page gcopt.Optional[AnotherPageRequest[I]]) gcopt.Optional[PaginatedRequest[I]] {
+	p, ok := page.Take()
+	if !ok {
+		return gcopt.Empty[PaginatedRequest[I]]()
+	}
+	return gcopt.Of(PaginatedRequest[I]{
+		Idt:           gcopt.Of(p.Idt),
+		StartPosition: p.StartPosition,
+		Order:         p.Order,
+		Orientation:   p.Orientation,
+		Size:          pageRes.Size,
+		Field:         pageRes.Field,
+	})
 }

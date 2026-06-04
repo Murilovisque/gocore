@@ -1,50 +1,67 @@
 package gcpag
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Murilovisque/gocore/gcfield"
 	"github.com/Murilovisque/gocore/gcopt"
 )
 
-func BuildRequestFromHttp[T gcfield.IdtOrdered](req *http.Request, defaultOrder Order, defaultSize int, fnIdtParser func(string) (T, bool)) PaginatedRequest[T] {
+func ParseRequestFromHttp[I gcfield.IdtOrdered](req *http.Request, params ParseRequestFromHttpParams[I]) (PaginatedRequest[I], error) {
 	q := req.URL.Query()
-	size, err := strconv.Atoi(q.Get(httpFieldPageSize))
+	size, err := strconv.Atoi(q.Get(httpParamPageSize))
 	if size < 1 || err != nil {
-		size = defaultSize
+		size = params.DefaultSize
 	}
-	order, err := StringToOrder(q.Get(httpFieldPageOrder))
+	order, err := ParseOrder(q.Get(httpParamPageOrder))
 	if err != nil {
-		order = defaultOrder
+		order = params.DefaultOrder
 	}
-	p := PaginatedRequest[T]{Size: size, Order: order}
-	var idt T
-	var valid bool
-	if idt, valid = fnIdtParser(q.Get(httpFieldPageStartIdt)); valid {
-		p.Idt = gcopt.Of(idt)
-		p.StartPosition = StartAt
-		p.Orientation = NextPage
-	} else if idt, valid = fnIdtParser(q.Get(httpFieldPageAfterIdt)); valid {
-		p.Idt = gcopt.Of(idt)
-		p.StartPosition = AfterAt
-		p.Orientation = NextPage
-	} else if idt, valid = fnIdtParser(q.Get(httpFieldReversePageStartIdt)); valid {
-		p.Idt = gcopt.Of(idt)
-		p.StartPosition = StartAt
-		p.Orientation = NextPage
-	} else if idt, valid = fnIdtParser(q.Get(httpFieldReversePageAfterIdt)); valid {
-		p.Idt = gcopt.Of(idt)
-		p.StartPosition = AfterAt
-		p.Orientation = NextPage
+	p := PaginatedRequest[I]{Size: size, Order: order}
+	checkPoints := []struct {
+		field string
+		pos   StartPosition
+		ori   Orientation
+	}{
+		{httpParamPageStartIdt, StartAt, NextPage},
+		{httpParamPageAfterIdt, AfterAt, NextPage},
+		{httpParamReversePageStartIdt, StartAt, PreviousPage},
+		{httpParamReversePageAfterIdt, AfterAt, PreviousPage},
 	}
-	return p
+	for _, cp := range checkPoints {
+		if val := q.Get(cp.field); val != "" {
+			if idt, ok, err := params.IdtParser(val); err != nil {
+				return p, err
+			} else if ok {
+				p.Idt = gcopt.Of(idt)
+				p.StartPosition = cp.pos
+				p.Orientation = cp.ori
+				break
+			}
+		}
+	}
+	if fp, ok := params.Field.Take(); ok {
+		for _, name := range fp.AllowedNames() {
+			if val := q.Get(httpParamPageField + name); val != "" {
+				if ok, err := fp.Parse(name, val); err != nil {
+					return p, err
+				} else if ok {
+					break
+				}
+			}
+		}
+	}
+	return p, nil
 }
 
-func BuildResponse[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](pageReq PaginatedRequest[I], items []E, firstIdt, lastIdt gcopt.Optional[I]) PaginatedResponse[I, E] {
+func NewResponse[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](pageReq PaginatedRequest[I], items []E, firstIdt, lastIdt gcopt.Optional[I]) PaginatedResponse[I, E] {
 	pageRes := PaginatedResponse[I, E]{
 		Items: items,
 		Size:  pageReq.Size,
+		Field: pageReq.Field,
 	}
 	if pageReq.Order == Desc {
 		firstIdt, lastIdt = lastIdt, firstIdt
@@ -97,4 +114,16 @@ func BuildResponse[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](pageReq Pagi
 		})
 	}
 	return pageRes
+}
+
+func ParseOrder(vl string) (Order, error) {
+	vl = strings.ToLower(vl)
+	switch vl {
+	case "asc":
+		return Asc, nil
+	case "desc":
+		return Desc, nil
+	default:
+		return Asc, fmt.Errorf("gcpag: invalid order value '%s'", vl)
+	}
 }

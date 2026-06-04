@@ -12,7 +12,7 @@ func TestTxt(t *testing.T) {
 	expectedEnglishMsg := "Message"
 
 	// Build test
-	txt := Build(expectedBrazilMsg, Txt{LangEnglish: expectedEnglishMsg})
+	txt := New(expectedBrazilMsg, Txt{LangEnglish: expectedEnglishMsg})
 	if txt.Content() != expectedBrazilMsg {
 		t.Fatalf("expected '%s', but '%s'", expectedBrazilMsg, txt.Content())
 	}
@@ -65,7 +65,7 @@ func TestListTxt(t *testing.T) {
 	expectedEnglishMsg := []string{"Message"}
 
 	// Build test
-	txt := BuildList(expectedBrazilMsg, ListTxt{LangEnglish: expectedEnglishMsg})
+	txt := NewList(expectedBrazilMsg, ListTxt{LangEnglish: expectedEnglishMsg})
 	if !slices.Equal(txt.Content(), expectedBrazilMsg) {
 		t.Fatalf("expected '%v', but '%v'", expectedBrazilMsg, txt.Content())
 	}

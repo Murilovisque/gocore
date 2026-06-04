@@ -5,18 +5,15 @@ import (
 	"github.com/Murilovisque/gocore/gcopt"
 )
 
-type QueryPaginatedRequest[I gcfield.IdtOrdered, E gcfield.Identifiable[I]] struct {
-	QueryItems                  string
-	ArgsQueryItems              []any
-	ConverterQueryItems         func(row SqlRow) (entity E, err error)
-	QueryFirstLastIdts          string
-	ArgsQueryFirstLastIdts      []any
-	ConverterQueryFirstLastIdts func(row SqlRow) (firstIdt, lastIdt gcopt.Optional[I], err error)
+type PagingCriteria[I gcfield.IdtOrdered] struct {
+	Idt     I
+	Field   gcopt.Optional[gcfield.FieldParser]
+	IsValid bool
+	Filter  string
+	OrderBy string
 }
 
-type PagingCriteria[I gcfield.IdtOrdered] struct {
-	Idt        I
-	IsValidIdt bool
-	Filter     string
-	OrderBy    string
+type ColumnCriteria struct {
+	Column      string
+	PlaceHolder string
 }

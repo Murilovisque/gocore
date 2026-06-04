@@ -5,7 +5,7 @@ import (
 	"maps"
 )
 
-func Build(brazilMsg string, anotherLanguages Txt) Txt {
+func New(brazilMsg string, anotherLanguages Txt) Txt {
 	msg := Txt{
 		LangBrazil: brazilMsg,
 	}
@@ -15,7 +15,7 @@ func Build(brazilMsg string, anotherLanguages Txt) Txt {
 	return msg
 }
 
-func BuildList(brazilMsgs []string, anotherLanguages ListTxt) ListTxt {
+func NewList(brazilMsgs []string, anotherLanguages ListTxt) ListTxt {
 	msgs := ListTxt{
 		LangBrazil: brazilMsgs,
 	}

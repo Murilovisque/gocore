@@ -17,12 +17,12 @@ func PlaceHolderRange(s SqlSyntax, startAt, stopBefore int) []any {
 	return phs
 }
 
-func BuildPagingCriteria[I gcfield.IdtOrdered](pagReq gcpag.PaginatedRequest[I], idtSqlField, idtPlaceHolder string) PagingCriteria[I] {
+func NewPagingCriteria[I gcfield.IdtOrdered](pagReq gcpag.PaginatedRequest[I], params NewPagingCriteriaParams) PagingCriteria[I] {
 	idtValue, ok := pagReq.Idt.Take()
 	if !ok {
 		return PagingCriteria[I]{
-			IsValidIdt: false,
-			OrderBy:    fmt.Sprintf("%s %s", idtSqlField, pagReq.Order.String()),
+			IsValid: false,
+			OrderBy: fmt.Sprintf("%s %s", params.Idt.Column, pagReq.Order.String()),
 		}
 	}
 	var cmpSignal string
@@ -45,12 +45,7 @@ func BuildPagingCriteria[I gcfield.IdtOrdered](pagReq gcpag.PaginatedRequest[I],
 			cmpSignal = "<"
 		}
 	}
-	if cmpSignal == "" {
-		return PagingCriteria[I]{
-			IsValidIdt: false,
-			OrderBy:    fmt.Sprintf("%s %s", idtSqlField, pagReq.Order.String()),
-		}
-	} else if pagReq.Order == gcpag.Desc {
+	if pagReq.Order == gcpag.Desc {
 		switch cmpSignal {
 		case ">":
 			cmpSignal = "<"
@@ -63,15 +58,32 @@ func BuildPagingCriteria[I gcfield.IdtOrdered](pagReq gcpag.PaginatedRequest[I],
 		}
 		idtOrder = idtOrder.Reverse()
 	}
+	if _, ok := pagReq.Field.Take(); ok && params.Field.IsPresent() {
+		sqlFld := params.Field.MustTake()
+		var cmpSignalField string
+		switch pagReq.Orientation {
+		case gcpag.NextPage:
+			cmpSignalField = ">="
+		case gcpag.PreviousPage:
+			cmpSignalField = "<="
+		}
+		return PagingCriteria[I]{
+			Idt:     idtValue,
+			Field:   pagReq.Field,
+			IsValid: true,
+			Filter:  fmt.Sprintf("%s %s %s and %s %s %s", params.Idt.Column, cmpSignal, params.Idt.PlaceHolder, sqlFld.Column, cmpSignalField, sqlFld.PlaceHolder),
+			OrderBy: fmt.Sprintf("%s %s, %s %s", params.Idt.Column, idtOrder.String(), sqlFld.Column, idtOrder.String()),
+		}
+	}
 	return PagingCriteria[I]{
-		Idt:        idtValue,
-		IsValidIdt: true,
-		Filter:     fmt.Sprintf("%s %s %s", idtSqlField, cmpSignal, idtPlaceHolder),
-		OrderBy:    fmt.Sprintf("%s %s", idtSqlField, idtOrder.String()),
+		Idt:     idtValue,
+		IsValid: true,
+		Filter:  fmt.Sprintf("%s %s %s", params.Idt.Column, cmpSignal, params.Idt.PlaceHolder),
+		OrderBy: fmt.Sprintf("%s %s", params.Idt.Column, idtOrder.String()),
 	}
 }
 
-func QueryPaginated[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](ctx context.Context, executor SqlExecutor, pagReq gcpag.PaginatedRequest[I], req QueryPaginatedRequest[I, E]) (gcpag.PaginatedResponse[I, E], error) {
+func QueryPaginated[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](ctx context.Context, executor SqlExecutor, pagReq gcpag.PaginatedRequest[I], req QueryPaginatedParams[I, E]) (gcpag.PaginatedResponse[I, E], error) {
 	var res gcpag.PaginatedResponse[I, E]
 	rowsItens, err := executor.Query(ctx, req.QueryItems, req.ArgsQueryItems...)
 	if err != nil {
@@ -97,5 +109,5 @@ func QueryPaginated[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](ctx context
 	if err != nil {
 		return res, fmt.Errorf("gcrepo: convert first last idt failed. Cause %w", err)
 	}
-	return gcpag.BuildResponse(pagReq, items, minIdt, maxIdt), nil
+	return gcpag.NewResponse(pagReq, items, minIdt, maxIdt), nil
 }

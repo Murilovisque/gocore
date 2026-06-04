@@ -37,7 +37,7 @@ func TestBuildResponse(t *testing.T) {
 			Size:          pageSize,
 		}
 		itemsQuery := items[currentFirstItemPage : currentLastItemPage+1]
-		res := BuildResponse(pgReq, itemsQuery, gcopt.Of(testUserIdt(0)), gcopt.Of(items[len(items)-1].Idt()))
+		res := NewResponse(pgReq, itemsQuery, gcopt.Of(testUserIdt(0)), gcopt.Of(items[len(items)-1].Idt()))
 		t.Logf("response built: %v", res)
 		if len(res.Items) != expectedItemsSliceLength {
 			t.Fatalf("expected length %d, but %d", expectedItemsSliceLength, len(res.Items))

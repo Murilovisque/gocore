@@ -2,7 +2,7 @@
 
 
 test:
-	go test -v ./...
+	go test ./...
 
 test-postgres:
 	$(MAKE) -C gcrepo/drivers/postgres test

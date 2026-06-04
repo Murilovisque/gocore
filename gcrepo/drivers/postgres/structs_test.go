@@ -59,14 +59,14 @@ func TestPostgresIntegration(t *testing.T) {
 	})
 
 	t.Run("InsertAndSelectPaginated", func(t *testing.T) {
-		expectedNames := []any{"Bola", "Bolinha", "Baino", "Baiana", "Bunito"}
+		expectedNames := []any{"Bola", "Bolinha", "Baiana", "Bolinha", "Bunito"}
 		_, err := exec.Exec(ctx, "INSERT INTO test_users (name) VALUES ($1), ($2), ($3), ($4), ($5)", expectedNames...)
 		if err != nil {
 			t.Errorf("erro no insert: %v", err)
 		}
 		const pageSize = 2
 		testPage := func(pageReq gcpag.PaginatedRequest[testUserIdt], skipNames, exptItemsSize int) gcpag.PaginatedResponse[testUserIdt, testUserModel] {
-			reqArg := gcrepo.QueryPaginatedRequest[testUserIdt, testUserModel]{
+			reqArg := gcrepo.QueryPaginatedParams[testUserIdt, testUserModel]{
 				ConverterQueryItems: func(row gcrepo.SqlRow) (m testUserModel, err error) {
 					err = row.Scan(&m.idt, &m.name)
 					return
@@ -78,8 +78,11 @@ func TestPostgresIntegration(t *testing.T) {
 					return
 				},
 			}
-			idtPag := gcrepo.BuildPagingCriteria(pageReq, "id", "$2")
-			if idtPag.IsValidIdt {
+			idtPag := gcrepo.NewPagingCriteria(pageReq, gcrepo.NewPagingCriteriaParams{
+				Idt:   gcrepo.ColumnCriteria{Column: "id", PlaceHolder: "$2"},
+				Field: gcopt.Empty[gcrepo.ColumnCriteria](),
+			})
+			if idtPag.IsValid {
 				reqArg.QueryItems = fmt.Sprintf("SELECT id, name FROM test_users WHERE name like $1 and %s order by %s limit $3", idtPag.Filter, idtPag.OrderBy)
 				reqArg.ArgsQueryItems = []any{"B%", idtPag.Idt, pageReq.Size}
 			} else {
@@ -126,7 +129,7 @@ func TestPostgresIntegration(t *testing.T) {
 			}
 
 			t.Log("test second page")
-			res = testPage(res.NextPage.MustTake().ToPageRequest(pageSize), 2, 2)
+			res = testPage(res.NextPageAsRequest().MustTake(), 2, 2)
 			if res.FirstPage.MustTake().Idt != f.Idt {
 				t.Fatalf("expected match first page in second pagination: %d not match %d", res.FirstPage.MustTake().Idt, f.Idt)
 			} else if res.LastPage.MustTake().Idt != l.Idt {
@@ -136,7 +139,7 @@ func TestPostgresIntegration(t *testing.T) {
 			}
 
 			t.Log("test last page")
-			res = testPage(res.NextPage.MustTake().ToPageRequest(pageSize), 4, 1)
+			res = testPage(res.NextPageAsRequest().MustTake(), 4, 1)
 			if res.FirstPage.MustTake().Idt != f.Idt {
 				t.Fatalf("expected match first page in third pagination: %d not match %d", res.FirstPage.MustTake().Idt, f.Idt)
 			} else if res.LastPage.MustTake().Idt != l.Idt {
@@ -148,7 +151,7 @@ func TestPostgresIntegration(t *testing.T) {
 			}
 
 			t.Log("test returning to second page")
-			res = testPage(res.PreviousPage.MustTake().ToPageRequest(pageSize), 2, 2)
+			res = testPage(res.PreviousPageAsRequest().MustTake(), 2, 2)
 			if res.FirstPage.MustTake().Idt != f.Idt {
 				t.Fatalf("expected match first page in second pagination: %d not match %d", res.FirstPage.MustTake().Idt, f.Idt)
 			} else if res.LastPage.MustTake().Idt != l.Idt {
@@ -158,7 +161,7 @@ func TestPostgresIntegration(t *testing.T) {
 			}
 
 			t.Log("test returning to first page")
-			res = testPage(res.PreviousPage.MustTake().ToPageRequest(pageSize), 0, 2)
+			res = testPage(res.PreviousPageAsRequest().MustTake(), 0, 2)
 			if res.FirstPage.MustTake().Idt != f.Idt {
 				t.Fatalf("expected match first page in second pagination: %d not match %d", res.FirstPage.MustTake().Idt, f.Idt)
 			} else if res.LastPage.MustTake().Idt != l.Idt {

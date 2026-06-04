@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/Murilovisque/gocore/gcfield"
 	"github.com/Murilovisque/gocore/gcopt"
 )
 
@@ -18,7 +19,7 @@ func TestPaginationResponseBuildHttpHeaderLink(t *testing.T) {
 		},
 		Size: 2,
 	}
-	result, err := pg.BuildHttpHeaderLinkValues("/users")
+	result, err := pg.ParseHttpHeaderLinkValues("/users")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,28 +63,62 @@ func TestPaginationResponseBuildHttpHeaderLink(t *testing.T) {
 			Orientation:   PreviousPage,
 		}),
 	}
-	result, err = pg.BuildHttpHeaderLinkValues("/users")
-	if err != nil {
-		t.Fatal(err)
-	}
-	generateUrl := func(path, relation, field, idt, order string, size int) string {
+	generateUrl := func(path, relation, field, idt, order string, size int, extraField gcopt.Optional[gcfield.FieldParser]) string {
 		u, err := url.Parse(path)
 		if err != nil {
 			t.Fatal(err)
 		}
 		q := u.Query()
 		q.Set(field, idt)
-		q.Set(httpFieldPageSize, strconv.Itoa(size))
-		q.Set(httpFieldPageOrder, order)
+		q.Set(httpParamPageSize, strconv.Itoa(size))
+		q.Set(httpParamPageOrder, order)
+		if f, ok := extraField.Take(); ok && f.IsValid() {
+			q.Set(httpParamPageField+f.Name(), f.String())
+		}
 		u.RawQuery = q.Encode()
 		return fmt.Sprintf("<%s>; rel=\"%s\"", u.String(), relation)
 	}
 	expected := []string{
-		generateUrl("/users", "first", httpFieldPageStartIdt, (pg.Items[0].Idt() - 1).String(), pg.FirstPage.MustTake().Order.String(), pg.Size),
-		generateUrl("/users", "self", httpFieldPageStartIdt, (pg.Items[0].Idt()).String(), pg.SelfPage.MustTake().Order.String(), pg.Size),
-		generateUrl("/users", "next", httpFieldPageAfterIdt, (pg.Items[0].Idt()).String(), pg.NextPage.MustTake().Order.String(), pg.Size),
-		generateUrl("/users", "prev", httpFieldReversePageAfterIdt, (pg.Items[0].Idt()).String(), pg.PreviousPage.MustTake().Order.String(), pg.Size),
-		generateUrl("/users", "last", httpFieldReversePageStartIdt, (pg.Items[0].Idt() + 1).String(), pg.LastPage.MustTake().Order.String(), pg.Size),
+		generateUrl("/users", "first", httpParamPageStartIdt, (pg.Items[0].Idt() - 1).String(), pg.FirstPage.MustTake().Order.String(), pg.Size, gcopt.Empty[gcfield.FieldParser]()),
+		generateUrl("/users", "self", httpParamPageStartIdt, (pg.Items[0].Idt()).String(), pg.SelfPage.MustTake().Order.String(), pg.Size, gcopt.Empty[gcfield.FieldParser]()),
+		generateUrl("/users", "next", httpParamPageAfterIdt, (pg.Items[0].Idt()).String(), pg.NextPage.MustTake().Order.String(), pg.Size, gcopt.Empty[gcfield.FieldParser]()),
+		generateUrl("/users", "prev", httpParamReversePageAfterIdt, (pg.Items[0].Idt()).String(), pg.PreviousPage.MustTake().Order.String(), pg.Size, gcopt.Empty[gcfield.FieldParser]()),
+		generateUrl("/users", "last", httpParamReversePageStartIdt, (pg.Items[0].Idt() + 1).String(), pg.LastPage.MustTake().Order.String(), pg.Size, gcopt.Empty[gcfield.FieldParser]()),
+	}
+
+	result, err = pg.ParseHttpHeaderLinkValues("/users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(result, expected) {
+		t.Fatalf("expected '%v' but '%v'", expected, result)
+	}
+
+	// extra Field paginated
+	fieldParser := gcfield.NewFieldParser([]string{"name"}, func(name, value string) (parsedValue any, valid bool, err error) {
+		valid = name == "name"
+		if valid {
+			parsedValue = value
+		}
+		return
+	}, func(name string, value any) string {
+		return value.(string)
+	})
+	if ok, err := fieldParser.Parse("name", "Murilo"); err != nil || !ok {
+		t.Fatalf("set field failed: %t and %s", ok, err.Error())
+	}
+	pg.Field = gcopt.Of(fieldParser)
+	expected = []string{
+		generateUrl("/users", "first", httpParamPageStartIdt, (pg.Items[0].Idt() - 1).String(), pg.FirstPage.MustTake().Order.String(), pg.Size, gcopt.Of(fieldParser)),
+		generateUrl("/users", "self", httpParamPageStartIdt, (pg.Items[0].Idt()).String(), pg.SelfPage.MustTake().Order.String(), pg.Size, gcopt.Of(fieldParser)),
+		generateUrl("/users", "next", httpParamPageAfterIdt, (pg.Items[0].Idt()).String(), pg.NextPage.MustTake().Order.String(), pg.Size, gcopt.Of(fieldParser)),
+		generateUrl("/users", "prev", httpParamReversePageAfterIdt, (pg.Items[0].Idt()).String(), pg.PreviousPage.MustTake().Order.String(), pg.Size, gcopt.Of(fieldParser)),
+		generateUrl("/users", "last", httpParamReversePageStartIdt, (pg.Items[0].Idt() + 1).String(), pg.LastPage.MustTake().Order.String(), pg.Size, gcopt.Of(fieldParser)),
+	}
+
+	result, err = pg.ParseHttpHeaderLinkValues("/users")
+	if err != nil {
+		t.Fatal(err)
 	}
 	if !slices.Equal(result, expected) {
 		t.Fatalf("expected '%v' but '%v'", expected, result)
