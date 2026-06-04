@@ -12,9 +12,11 @@ type NewPagingCriteriaParams struct {
 
 type QueryPaginatedParams[I gcfield.IdtOrdered, E gcfield.Identifiable[I]] struct {
 	QueryItems                  string
-	ArgsQueryItems              []any
+	QueryArgs                   []any
 	ConverterQueryItems         func(row SqlRow) (entity E, err error)
 	QueryFirstLastIdts          string
-	ArgsQueryFirstLastIdts      []any
 	ConverterQueryFirstLastIdts func(row SqlRow) (firstIdt, lastIdt gcopt.Optional[I], err error)
+	IdtColumn                   string
+	FieldColumn                 gcopt.Optional[string]
+	LastQueryPlaceHolder        int
 }

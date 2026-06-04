@@ -71,25 +71,17 @@ func TestPostgresIntegration(t *testing.T) {
 					err = row.Scan(&m.idt, &m.name)
 					return
 				},
-				QueryFirstLastIdts:     "select min(id), max(id) from test_users WHERE name like $1",
-				ArgsQueryFirstLastIdts: []any{"B%"},
+				QueryFirstLastIdts: "select min(id), max(id) from test_users WHERE name like $1",
 				ConverterQueryFirstLastIdts: func(row gcrepo.SqlRow) (firstIdt, lastIdt gcopt.Optional[testUserIdt], err error) {
 					err = row.Scan(&firstIdt, &lastIdt)
 					return
 				},
+				IdtColumn:            "id",
+				QueryItems:           "SELECT id, name FROM test_users WHERE name like $1",
+				QueryArgs:            []any{"B%"},
+				LastQueryPlaceHolder: 1,
 			}
-			idtPag := gcrepo.NewPagingCriteria(pageReq, gcrepo.NewPagingCriteriaParams{
-				Idt:   gcrepo.ColumnCriteria{Column: "id", PlaceHolder: "$2"},
-				Field: gcopt.Empty[gcrepo.ColumnCriteria](),
-			})
-			if idtPag.IsValid {
-				reqArg.QueryItems = fmt.Sprintf("SELECT id, name FROM test_users WHERE name like $1 and %s order by %s limit $3", idtPag.Filter, idtPag.OrderBy)
-				reqArg.ArgsQueryItems = []any{"B%", idtPag.Idt, pageReq.Size}
-			} else {
-				reqArg.QueryItems = fmt.Sprintf("SELECT id, name FROM test_users WHERE name like $1 order by %s limit $2", idtPag.OrderBy)
-				reqArg.ArgsQueryItems = []any{"B%", pageReq.Size}
-			}
-			t.Logf("query itens: %s - args: %v", reqArg.QueryItems, reqArg.ArgsQueryItems)
+			t.Logf("query itens: %s - args: %v", reqArg.QueryItems, reqArg.QueryArgs)
 			response, err := gcrepo.QueryPaginated(t.Context(), exec, pageReq, reqArg)
 			t.Logf("response %v", response)
 			if err != nil {

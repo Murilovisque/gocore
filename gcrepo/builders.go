@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/Murilovisque/gocore/gcfield"
+	"github.com/Murilovisque/gocore/gcopt"
 	"github.com/Murilovisque/gocore/gcpag"
 )
 
@@ -17,12 +18,13 @@ func PlaceHolderRange(s SqlSyntax, startAt, stopBefore int) []any {
 	return phs
 }
 
-func NewPagingCriteria[I gcfield.IdtOrdered](pagReq gcpag.PaginatedRequest[I], params NewPagingCriteriaParams) PagingCriteria[I] {
+func newPagingCriteria[I gcfield.IdtOrdered](syntax SqlSyntax, pagReq gcpag.PaginatedRequest[I], params NewPagingCriteriaParams) PagingCriteria[I] {
 	idtValue, ok := pagReq.Idt.Take()
 	if !ok {
 		return PagingCriteria[I]{
-			IsValid: false,
-			OrderBy: fmt.Sprintf("%s %s", params.Idt.Column, pagReq.Order.String()),
+			OrderBy: fmt.Sprintf("order by %s %s", params.Idt.Column, pagReq.Order.String()),
+			Limit:   syntax.LimitStatement(params.Idt.PlaceHolder),
+			Args:    []any{pagReq.Size},
 		}
 	}
 	var cmpSignal string
@@ -58,8 +60,9 @@ func NewPagingCriteria[I gcfield.IdtOrdered](pagReq gcpag.PaginatedRequest[I], p
 		}
 		idtOrder = idtOrder.Reverse()
 	}
-	if _, ok := pagReq.Field.Take(); ok && params.Field.IsPresent() {
+	if params.Field.IsPresent() && pagReq.Field.IsPresent() {
 		sqlFld := params.Field.MustTake()
+		paramFld := pagReq.Field.MustTake()
 		var cmpSignalField string
 		switch pagReq.Orientation {
 		case gcpag.NextPage:
@@ -70,22 +73,41 @@ func NewPagingCriteria[I gcfield.IdtOrdered](pagReq gcpag.PaginatedRequest[I], p
 		return PagingCriteria[I]{
 			Idt:     idtValue,
 			Field:   pagReq.Field,
-			IsValid: true,
-			Filter:  fmt.Sprintf("%s %s %s and %s %s %s", params.Idt.Column, cmpSignal, params.Idt.PlaceHolder, sqlFld.Column, cmpSignalField, sqlFld.PlaceHolder),
-			OrderBy: fmt.Sprintf("%s %s, %s %s", params.Idt.Column, idtOrder.String(), sqlFld.Column, idtOrder.String()),
+			Where:   fmt.Sprintf("%s %s %s and %s %s %s", params.Idt.Column, cmpSignal, syntax.PlaceHolder(params.Idt.PlaceHolder), sqlFld.Column, cmpSignalField, syntax.PlaceHolder(sqlFld.PlaceHolder)),
+			OrderBy: fmt.Sprintf("order by %s %s, %s %s", params.Idt.Column, idtOrder.String(), sqlFld.Column, idtOrder.String()),
+			Limit:   syntax.LimitStatement(sqlFld.PlaceHolder + 1),
+			Args:    []any{idtValue, paramFld.Value(), pagReq.Size},
 		}
 	}
 	return PagingCriteria[I]{
 		Idt:     idtValue,
-		IsValid: true,
-		Filter:  fmt.Sprintf("%s %s %s", params.Idt.Column, cmpSignal, params.Idt.PlaceHolder),
-		OrderBy: fmt.Sprintf("%s %s", params.Idt.Column, idtOrder.String()),
+		Where:   fmt.Sprintf("%s %s %s", params.Idt.Column, cmpSignal, syntax.PlaceHolder(params.Idt.PlaceHolder)),
+		OrderBy: fmt.Sprintf("order by %s %s", params.Idt.Column, idtOrder.String()),
+		Limit:   syntax.LimitStatement(params.Idt.PlaceHolder + 1),
+		Args:    []any{idtValue, pagReq.Size},
 	}
 }
 
 func QueryPaginated[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](ctx context.Context, executor SqlExecutor, pagReq gcpag.PaginatedRequest[I], req QueryPaginatedParams[I, E]) (gcpag.PaginatedResponse[I, E], error) {
 	var res gcpag.PaginatedResponse[I, E]
-	rowsItens, err := executor.Query(ctx, req.QueryItems, req.ArgsQueryItems...)
+	var query string
+	syntax := executor.Syntax()
+	pagCrit := newPagingCriteria(syntax, pagReq, NewPagingCriteriaParams{
+		Idt: ColumnCriteria{Column: req.IdtColumn, PlaceHolder: req.LastQueryPlaceHolder + 1},
+		Field: gcopt.Map(req.FieldColumn, func(fldColumn string) ColumnCriteria {
+			return ColumnCriteria{
+				Column:      fldColumn,
+				PlaceHolder: req.LastQueryPlaceHolder + 2,
+			}
+		}),
+	})
+	if pagCrit.Where != "" {
+		query = fmt.Sprintf("%s and %s %s %s", req.QueryItems, pagCrit.Where, pagCrit.OrderBy, pagCrit.Limit)
+	} else {
+		query = fmt.Sprintf("%s %s %s", req.QueryItems, pagCrit.OrderBy, pagCrit.Limit)
+	}
+	args := append(req.QueryArgs, pagCrit.Args...)
+	rowsItens, err := executor.Query(ctx, query, args...)
 	if err != nil {
 		return res, fmt.Errorf("gcrepo: query itens paginated failed. Cause %w", err)
 	}
@@ -104,7 +126,7 @@ func QueryPaginated[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](ctx context
 	if pagReq.Orientation == gcpag.PreviousPage {
 		slices.Reverse(items)
 	}
-	rowFirstLast := executor.QueryRow(ctx, req.QueryFirstLastIdts, req.ArgsQueryFirstLastIdts...)
+	rowFirstLast := executor.QueryRow(ctx, req.QueryFirstLastIdts, req.QueryArgs...)
 	minIdt, maxIdt, err := req.ConverterQueryFirstLastIdts(rowFirstLast)
 	if err != nil {
 		return res, fmt.Errorf("gcrepo: convert first last idt failed. Cause %w", err)
