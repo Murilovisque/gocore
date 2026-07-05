@@ -5,10 +5,9 @@ import (
 )
 
 type PagingCriteria[I gcfield.IdtOrdered] struct {
-	Idt          I
-	Query        string
-	Args         []any
-	PreviousArgs []any
+	Idt   I
+	Query string
+	Args  []any
 	// Condition string //TODO: remove
 	// OrderBy string
 	// Limit   string

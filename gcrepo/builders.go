@@ -83,25 +83,24 @@ func newPagingCriteria[I gcfield.IdtOrdered](syntax SqlSyntax, pagReq gcpag.Pagi
 			return PagingCriteria[I]{
 				Idt: idtValue,
 				Query: fmt.Sprintf(
-					`select *, false as is_previous_page from (%s) as sub_gorepo_pag
+					`select * from (%s) as sub_gorepo_pag
 					and (sub_gorepo_pag.%s, sub_gorepo_pag.%s) %s ((%s), %s)
 					order by sub_gorepo_pag.%s %s, sub_gorepo_pag.%s %s
-					%s`,
-					query,
-					sortFieldCriteria.ColumnName, idtColumn.Column, cmpSignalTuple, sortFieldCriteria.SubQuery, syntax.PlaceHolder(idtColumn.PlaceHolder+1),
-					sortFieldCriteria.ColumnName, tupleOrder.String(), idtColumn.Column, tupleOrder.String(),
-					syntax.LimitStatement(idtColumn.PlaceHolder+2)),
-				PreviousPageQuery: fmt.Sprintf(
-					`select * from (%s) as sub_gorepo_pag
+					%s
+					union all
+					select *, false as is_previous_page from (%s) as sub_gorepo_pag
 					and (sub_gorepo_pag.%s, sub_gorepo_pag.%s) %s ((%s), %s)
 					order by sub_gorepo_pag.%s %s, sub_gorepo_pag.%s %s
 					%s`,
 					query,
 					sortFieldCriteria.ColumnName, idtColumn.Column, cmpSignalPrevious, sortFieldCriteria.SubQuery, syntax.PlaceHolder(idtColumn.PlaceHolder+1),
 					sortFieldCriteria.ColumnName, tupleOrderPrevious.String(), idtColumn.Column, tupleOrderPrevious.String(),
+					syntax.LimitStatement(idtColumn.PlaceHolder+2),
+					query,
+					sortFieldCriteria.ColumnName, idtColumn.Column, cmpSignalTuple, sortFieldCriteria.SubQuery, syntax.PlaceHolder(idtColumn.PlaceHolder+1),
+					sortFieldCriteria.ColumnName, tupleOrder.String(), idtColumn.Column, tupleOrder.String(),
 					syntax.LimitStatement(idtColumn.PlaceHolder+2)),
-				Args:         []any{idtValue, idtValue, sizeMoreNextElement},
-				PreviousArgs: []any{idtValue, idtValue, 1},
+				Args: []any{idtValue, idtValue, 1, idtValue, idtValue, sizeMoreNextElement},
 			}
 		}
 	}
