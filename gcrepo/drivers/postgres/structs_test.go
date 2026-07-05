@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Murilovisque/gocore/gcfield"
 	"github.com/Murilovisque/gocore/gcopt"
 	"github.com/Murilovisque/gocore/gcpag"
 	"github.com/Murilovisque/gocore/gcrepo"
@@ -45,16 +46,16 @@ func TestPostgresIntegration(t *testing.T) {
 	t.Run("InsertAndSelect", func(t *testing.T) {
 		_, err := exec.Exec(ctx, "INSERT INTO test_users (name) VALUES ($1)", "Murilo")
 		if err != nil {
-			t.Errorf("erro no insert: %v", err)
+			t.Fatalf("erro no insert: %v", err)
 		}
 		row := exec.QueryRow(ctx, "SELECT name FROM test_users WHERE name = $1", "Murilo")
 		var name string
 		if err := row.Scan(&name); err != nil {
-			t.Errorf("erro no scan: %v", err)
+			t.Fatalf("erro no scan: %v", err)
 		}
 
 		if name != "Murilo" {
-			t.Errorf("expected Murilo, but '%s'", name)
+			t.Fatalf("expected Murilo, but '%s'", name)
 		}
 	})
 
@@ -62,26 +63,59 @@ func TestPostgresIntegration(t *testing.T) {
 		expectedNames := []any{"Bola", "Bolinha", "Baiana", "Bolinha", "Bunito"}
 		_, err := exec.Exec(ctx, "INSERT INTO test_users (name) VALUES ($1), ($2), ($3), ($4), ($5)", expectedNames...)
 		if err != nil {
-			t.Errorf("erro no insert: %v", err)
+			t.Fatalf("erro no insert: %v", err)
 		}
+		const baseSelectQuery = "SELECT id, name FROM test_users WHERE name like $1"
+		baseSelectArgs := []any{"B%"}
 		const pageSize = 2
 		testPage := func(pageReq gcpag.PaginatedRequest[testUserIdt], skipNames, exptItemsSize int) gcpag.PaginatedResponse[testUserIdt, testUserModel] {
+			{ //log table state
+				rows, err := exec.Query(t.Context(), baseSelectQuery, baseSelectArgs...)
+				if err != nil {
+					t.Fatal(err)
+				}
+				targetRows, err := gcrepo.CollectRows(rows, func(row gcrepo.SqlRow) (map[string]any, error) {
+					var id int
+					var name string
+					err := row.Scan(&id, &name)
+					target := map[string]any{
+						"id":   id,
+						"name": name,
+					}
+					return target, err
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Log("table state base query:", targetRows)
+			}
 			reqArg := gcrepo.QueryPaginatedParams[testUserIdt, testUserModel]{
 				ConverterQueryItems: func(row gcrepo.SqlRow) (m testUserModel, err error) {
 					err = row.Scan(&m.idt, &m.name)
 					return
 				},
-				QueryFirstLastIdts: "select min(id), max(id) from test_users WHERE name like $1",
+				// QueryFirstLastIdts: `with users as (select id, name from test_users WHERE name like $1)
+				// 	select
+				// 		(select id from users order by name, id limit 1) as first,
+				// 		(select id from users order by name desc, id desc limit 1) as last`,
 				ConverterQueryFirstLastIdts: func(row gcrepo.SqlRow) (firstIdt, lastIdt gcopt.Optional[testUserIdt], err error) {
 					err = row.Scan(&firstIdt, &lastIdt)
 					return
 				},
-				IdtColumn:            "id",
-				QueryItems:           "SELECT id, name FROM test_users WHERE name like $1",
-				QueryArgs:            []any{"B%"},
+				IdtColumn:  "id",
+				QueryItems: baseSelectQuery,
+				QueryArgs:  baseSelectArgs,
+				FieldColumn: gcopt.Of(func(fld gcfield.FieldNameOrdered, placeHolder int) gcopt.Optional[gcrepo.SubQueryPaginatedFieldOrdered] {
+					if fld != "name" {
+						return gcopt.Empty[gcrepo.SubQueryPaginatedFieldOrdered]()
+					}
+					return gcopt.Of(gcrepo.SubQueryPaginatedFieldOrdered{
+						SubQuery:   "select name from test_users where id = $" + strconv.Itoa(placeHolder),
+						ColumnName: "name",
+					})
+				}),
 				LastQueryPlaceHolder: 1,
 			}
-			t.Logf("query itens: %s - args: %v", reqArg.QueryItems, reqArg.QueryArgs)
 			response, err := gcrepo.QueryPaginated(t.Context(), exec, pageReq, reqArg)
 			t.Logf("response %v", response)
 			if err != nil {
@@ -164,7 +198,8 @@ func TestPostgresIntegration(t *testing.T) {
 				t.Fatal("expected first page does not have previous")
 			}
 		}
-		t.Log("asceding test")
+		t.Log("ascending test")
+		expectedNames = []any{"Bola", "Bolinha", "Baiana", "Bolinha", "Bunito"}
 		pageReq := gcpag.PaginatedRequest[testUserIdt]{
 			Size: pageSize,
 		}
@@ -177,6 +212,14 @@ func TestPostgresIntegration(t *testing.T) {
 			Order: gcpag.Desc,
 		}
 		testNavegation(pageReq)
+
+		// t.Log("ascending by name test")
+		// expectedNames = []any{"Baiana", "Bola", "Bolinha", "Bolinha", "Bunito"}
+		// pageReq = gcpag.PaginatedRequest[testUserIdt]{
+		// 	Size:  pageSize,
+		// 	Field: gcopt.Of(gcfield.FieldNameOrdered("name")),
+		// }
+		// testNavegation(pageReq)
 	})
 	t.Run("TransactionCommit", func(t *testing.T) {
 		txRes, err := res.Begin(ctx)

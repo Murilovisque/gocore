@@ -15,7 +15,7 @@ type PaginatedRequest[I gcfield.IdtOrdered] struct {
 	Order         Order
 	Orientation   Orientation
 	Size          int
-	Field         gcopt.Optional[gcfield.FieldParser]
+	SortField     gcopt.Optional[gcfield.FieldNameOrdered] //TODO: rename to FieldSorted
 }
 
 type AnotherPageRequest[I gcfield.IdtOrdered] struct {
@@ -33,7 +33,7 @@ type PaginatedResponse[I gcfield.IdtOrdered, E gcfield.Identifiable[I]] struct {
 	FirstPage    gcopt.Optional[AnotherPageRequest[I]]
 	LastPage     gcopt.Optional[AnotherPageRequest[I]]
 	Size         int
-	Field        gcopt.Optional[gcfield.FieldParser]
+	Field        gcopt.Optional[gcfield.FieldNameOrdered] //TODO: rename to FieldSorted
 }
 
 func (pageRes PaginatedResponse[I, E]) ParseHttpHeaderLinkValues(relativePath string) ([]string, error) {
@@ -58,8 +58,8 @@ func (pageRes PaginatedResponse[I, E]) ParseHttpHeaderLinkValues(relativePath st
 		}
 		q.Set(httpParamPageSize, strconv.Itoa(pageRes.Size))
 		q.Set(httpParamPageOrder, anotherPage.Order.String())
-		if f, ok := pageRes.Field.Take(); ok && f.IsValid() {
-			q.Set(httpParamPageField+f.Name(), f.String())
+		if f, ok := pageRes.Field.Take(); ok {
+			q.Set(httpParamPageSortField, f.String())
 		}
 		u.RawQuery = q.Encode()
 		links = append(links, []string{fmt.Sprintf("<%s>; rel=\"%s\"", u.String(), relation)}...)
@@ -115,6 +115,6 @@ func (pageRes PaginatedResponse[I, E]) pageAsRequest(page gcopt.Optional[Another
 		Order:         p.Order,
 		Orientation:   p.Orientation,
 		Size:          pageRes.Size,
-		Field:         pageRes.Field,
+		SortField:     pageRes.Field,
 	})
 }

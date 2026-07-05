@@ -1,6 +1,10 @@
 package gcfield
 
-import "cmp"
+import (
+	"cmp"
+
+	"github.com/Murilovisque/gocore/gcopt"
+)
 
 type IdtOrdered interface {
 	cmp.Ordered
@@ -9,4 +13,8 @@ type IdtOrdered interface {
 
 type Identifiable[T IdtOrdered] interface {
 	Idt() T
+}
+
+type FieldNameOrderedParser interface {
+	ParseFieldNameOrdered(name string) (gcopt.Optional[FieldNameOrdered], error)
 }

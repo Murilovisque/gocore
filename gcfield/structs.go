@@ -1,6 +1,22 @@
 package gcfield
 
-type FieldParser struct {
+import "github.com/Murilovisque/gocore/gcopt"
+
+type FieldNameOrdered string
+
+func (f FieldNameOrdered) String() string {
+	return string(f)
+}
+
+type fieldNameOrderedParserImpl struct {
+	parser func(name string) (parsedValue gcopt.Optional[FieldNameOrdered], err error)
+}
+
+func (f fieldNameOrderedParserImpl) ParseFieldNameOrdered(name string) (gcopt.Optional[FieldNameOrdered], error) {
+	return f.parser(name)
+}
+
+type FieldParser struct { //todo: REMOVE
 	allowedNames []string
 	currentName  string
 	currentValue any

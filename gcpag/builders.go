@@ -45,7 +45,7 @@ func ParseRequestFromHttp[I gcfield.IdtOrdered](req *http.Request, params ParseR
 	}
 	if fp, ok := params.Field.Take(); ok {
 		for _, name := range fp.AllowedNames() {
-			if val := q.Get(httpParamPageField + name); val != "" {
+			if val := q.Get(httpParamPageSortField + name); val != "" {
 				if ok, err := fp.Parse(name, val); err != nil {
 					return p, err
 				} else if ok {
@@ -57,64 +57,64 @@ func ParseRequestFromHttp[I gcfield.IdtOrdered](req *http.Request, params ParseR
 	return p, nil
 }
 
-func NewResponse[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](pageReq PaginatedRequest[I], items []E, firstIdt, lastIdt gcopt.Optional[I]) PaginatedResponse[I, E] {
-	pageRes := PaginatedResponse[I, E]{
-		Items: items,
-		Size:  pageReq.Size,
-		Field: pageReq.Field,
-	}
-	if pageReq.Order == Desc {
-		firstIdt, lastIdt = lastIdt, firstIdt
-	}
-	hasItems := len(items) > 0
-	if fi, ok := firstIdt.Take(); ok {
-		pageRes.FirstPage = gcopt.Of(AnotherPageRequest[I]{
-			Idt:           fi,
-			StartPosition: StartAt,
-			Order:         pageReq.Order,
-			Orientation:   NextPage,
-		})
-		if hasItems {
-			initialItem := items[0]
-			if (pageReq.Order == Asc && initialItem.Idt() > fi) || (pageReq.Order == Desc && initialItem.Idt() < fi) {
-				pageRes.PreviousPage = gcopt.Of(AnotherPageRequest[I]{
-					Idt:           initialItem.Idt(),
-					StartPosition: AfterAt,
-					Order:         pageReq.Order,
-					Orientation:   PreviousPage,
-				})
-			}
-		}
-	}
-	if li, ok := lastIdt.Take(); ok {
-		pageRes.LastPage = gcopt.Of(AnotherPageRequest[I]{
-			Idt:           li,
-			StartPosition: StartAt,
-			Order:         pageReq.Order,
-			Orientation:   PreviousPage,
-		})
-		if hasItems {
-			lastItem := items[len(items)-1]
-			if (pageReq.Order == Asc && lastItem.Idt() < li) || (pageReq.Order == Desc && lastItem.Idt() > li) {
-				pageRes.NextPage = gcopt.Of(AnotherPageRequest[I]{
-					Idt:           lastItem.Idt(),
-					StartPosition: AfterAt,
-					Order:         pageReq.Order,
-					Orientation:   NextPage,
-				})
-			}
-		}
-	}
-	if hasItems {
-		pageRes.SelfPage = gcopt.Of(AnotherPageRequest[I]{
-			Idt:           items[0].Idt(),
-			StartPosition: StartAt,
-			Order:         pageReq.Order,
-			Orientation:   pageReq.Orientation,
-		})
-	}
-	return pageRes
-}
+// func NewResponse[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](pageReq PaginatedRequest[I], items []E, firstIdt, lastIdt gcopt.Optional[I]) PaginatedResponse[I, E] {
+// 	pageRes := PaginatedResponse[I, E]{
+// 		Items: items,
+// 		Size:  pageReq.Size,
+// 		Field: pageReq.Field,
+// 	}
+// 	if pageReq.Order == Desc {
+// 		firstIdt, lastIdt = lastIdt, firstIdt
+// 	}
+// 	hasItems := len(items) > 0
+// 	if fi, ok := firstIdt.Take(); ok {
+// 		pageRes.FirstPage = gcopt.Of(AnotherPageRequest[I]{
+// 			Idt:           fi,
+// 			StartPosition: StartAt,
+// 			Order:         pageReq.Order,
+// 			Orientation:   NextPage,
+// 		})
+// 		if hasItems {
+// 			initialItem := items[0]
+// 			if (pageReq.Order == Asc && initialItem.Idt() > fi) || (pageReq.Order == Desc && initialItem.Idt() < fi) {
+// 				pageRes.PreviousPage = gcopt.Of(AnotherPageRequest[I]{
+// 					Idt:           initialItem.Idt(),
+// 					StartPosition: AfterAt,
+// 					Order:         pageReq.Order,
+// 					Orientation:   PreviousPage,
+// 				})
+// 			}
+// 		}
+// 	}
+// 	if li, ok := lastIdt.Take(); ok {
+// 		pageRes.LastPage = gcopt.Of(AnotherPageRequest[I]{
+// 			Idt:           li,
+// 			StartPosition: StartAt,
+// 			Order:         pageReq.Order,
+// 			Orientation:   PreviousPage,
+// 		})
+// 		if hasItems {
+// 			lastItem := items[len(items)-1]
+// 			if (pageReq.Order == Asc && lastItem.Idt() < li) || (pageReq.Order == Desc && lastItem.Idt() > li) {
+// 				pageRes.NextPage = gcopt.Of(AnotherPageRequest[I]{
+// 					Idt:           lastItem.Idt(),
+// 					StartPosition: AfterAt,
+// 					Order:         pageReq.Order,
+// 					Orientation:   NextPage,
+// 				})
+// 			}
+// 		}
+// 	}
+// 	if hasItems {
+// 		pageRes.SelfPage = gcopt.Of(AnotherPageRequest[I]{
+// 			Idt:           items[0].Idt(),
+// 			StartPosition: StartAt,
+// 			Order:         pageReq.Order,
+// 			Orientation:   pageReq.Orientation,
+// 		})
+// 	}
+// 	return pageRes
+// }
 
 func ParseOrder(vl string) (Order, error) {
 	vl = strings.ToLower(vl)

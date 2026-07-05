@@ -17,7 +17,7 @@ const (
 
 const (
 	httpParamPageSize            = "page-size"
-	httpParamPageField           = "page-field-"
+	httpParamPageSortField       = "page-sort-field"
 	httpParamPageOrder           = "page-order"
 	httpParamPageStartIdt        = "page-start-idt"
 	httpParamPageAfterIdt        = "page-after-idt"
