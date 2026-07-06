@@ -15,7 +15,7 @@ type QueryPaginatedParams[I gcfield.IdtOrdered, E gcfield.Identifiable[I]] struc
 	QueryArgs           []any
 	ConverterQueryItems func(row SqlRow) (entity E, err error)
 	// QueryFirstLastIdts          string //TODO: remove
-	ConverterQueryFirstLastIdts func(row SqlRow) (firstIdt, lastIdt gcopt.Optional[I], err error)
+	ConverterQueryFirstLastIdts func(row SqlRow) (firstIdt, lastIdt gcopt.Optional[I], err error) //TODO: remove
 	IdtColumn                   string
 	FieldColumn                 gcopt.Optional[func(fld gcfield.FieldNameOrdered, placeHolder int) gcopt.Optional[SubQueryPaginatedFieldOrdered]] //TODO: rename, chnage placeHolder int to string already adapted
 	LastQueryPlaceHolder        int

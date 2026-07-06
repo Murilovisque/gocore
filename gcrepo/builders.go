@@ -24,7 +24,7 @@ func newPagingCriteria[I gcfield.IdtOrdered](syntax SqlSyntax, pagReq gcpag.Pagi
 	if !ok {
 		// Without page parameter
 		if sortFieldFn.IsPresent() && pagReq.SortField.IsPresent() {
-			// Without page parameter and with sorted Field
+			// Without page parameter and with sorted field
 			sqlFld := sortFieldFn.MustTake() //rename here and bellow and more bellow
 			paramFld := pagReq.SortField.MustTake()
 			if sortFieldCriteria, ok := sqlFld(paramFld, idtColumn.PlaceHolder).Take(); ok {
@@ -52,7 +52,7 @@ func newPagingCriteria[I gcfield.IdtOrdered](syntax SqlSyntax, pagReq gcpag.Pagi
 		}
 	}
 	if sortFieldFn.IsPresent() && pagReq.SortField.IsPresent() {
-		// With page parameter and with sorted Field
+		// With page parameter and sorted field
 		sqlFld := sortFieldFn.MustTake()
 		paramFld := pagReq.SortField.MustTake()
 		if sortFieldCriteria, ok := sqlFld(paramFld, idtColumn.PlaceHolder).Take(); ok {
@@ -175,31 +175,66 @@ func QueryPaginated[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](ctx context
 	}
 	defer rowsItens.Close()
 	var items []E
-	for rowsItens.Next() {
-		m, err := req.ConverterQueryItems(rowsItens)
-		if err != nil {
-			return res, fmt.Errorf("gcrepo: convert item of the rows failed. Cause %w", err)
+	hasPrevious := false
+	if rowsItens.Next() {
+		// check if previous row exists. If not
+		rowsItemsWrapper := sqlRowWrapper{
+			SqlRow: rowsItens,
+			fnWrapper: func(args ...any) ([]any, error) {
+				return append(args, &hasPrevious), nil
+			},
 		}
-		items = append(items, m)
-	}
-	if err = rowsItens.Err(); err != nil {
-		return res, fmt.Errorf("gcrepo: convert item after rows iteration failed. Cause %w", err)
+		m, err := req.ConverterQueryItems(&rowsItemsWrapper)
+		if err != nil {
+			return res, fmt.Errorf("gcrepo: convert item of the previous row failed. Cause %w", err)
+		} else if !hasPrevious { // if not exist a previous, so it is page items
+			items = append(items, m)
+		}
+		// continue taking page items
+		for rowsItens.Next() {
+			m, err := req.ConverterQueryItems(rowsItens)
+			if err != nil {
+				return res, fmt.Errorf("gcrepo: convert item of the rows failed. Cause %w", err)
+			}
+			items = append(items, m)
+		}
+		if err = rowsItens.Err(); err != nil {
+			return res, fmt.Errorf("gcrepo: convert item after rows iteration failed. Cause %w", err)
+		}
 	}
 	hasNextPage := len(items) > pagReq.Size
-	if hasNextPage {
+	if hasNextPage { //check if exist next row
 		items = items[:len(items)-1]
 	}
 	if pagReq.Orientation == gcpag.PreviousPage {
 		slices.Reverse(items)
 	}
+	return newPaginatedResponse(pagReq, items, hasPrevious, hasNextPage), nil
+}
 
-	rowFirstLast := executor.QueryRow(ctx, queryFirstLast, req.QueryArgs...)
-	minIdt, maxIdt, err := req.ConverterQueryFirstLastIdts(rowFirstLast)
-	if err != nil {
-		return res, fmt.Errorf("gcrepo: convert first last idt failed. Cause %w", err)
+func newPaginatedResponse[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](pageReq gcpag.PaginatedRequest[I], items []E, hasPreviousPage, hasNextPage bool) gcpag.PaginatedResponse[I, E] {
+	pageRes := gcpag.PaginatedResponse[I, E]{
+		Items: items,
+		Size:  pageReq.Size,
+		Field: pageReq.SortField,
 	}
-	if !pagCrit.IsSortedByField {
-		pagReq.SortField = gcopt.Empty[gcfield.FieldNameOrdered]()
+	if len(items) > 0 {
+		if hasPreviousPage {
+			pageRes.PreviousPage = gcopt.Of(gcpag.AnotherPageRequest[I]{
+				Idt:           items[0].Idt(),
+				StartPosition: gcpag.AfterAt,
+				Order:         pageReq.Order,
+				Orientation:   gcpag.PreviousPage,
+			})
+		}
+		if hasNextPage {
+			pageRes.NextPage = gcopt.Of(gcpag.AnotherPageRequest[I]{
+				Idt:           items[len(items)-1].Idt(),
+				StartPosition: gcpag.AfterAt,
+				Order:         pageReq.Order,
+				Orientation:   gcpag.NextPage,
+			})
+		}
 	}
-	return gcpag.NewResponse(pagReq, items, minIdt, maxIdt), nil
+	return pageRes
 }

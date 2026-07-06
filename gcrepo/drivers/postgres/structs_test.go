@@ -94,10 +94,6 @@ func TestPostgresIntegration(t *testing.T) {
 					err = row.Scan(&m.idt, &m.name)
 					return
 				},
-				// QueryFirstLastIdts: `with users as (select id, name from test_users WHERE name like $1)
-				// 	select
-				// 		(select id from users order by name, id limit 1) as first,
-				// 		(select id from users order by name desc, id desc limit 1) as last`,
 				ConverterQueryFirstLastIdts: func(row gcrepo.SqlRow) (firstIdt, lastIdt gcopt.Optional[testUserIdt], err error) {
 					err = row.Scan(&firstIdt, &lastIdt)
 					return
