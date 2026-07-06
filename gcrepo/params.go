@@ -11,12 +11,13 @@ type NewPagingCriteriaParams struct { //TODO: remove
 }
 
 type QueryPaginatedParams[I gcfield.IdtOrdered, E gcfield.Identifiable[I]] struct {
-	QueryItems          string
-	QueryArgs           []any
-	ConverterQueryItems func(row SqlRow) (entity E, err error)
+	QueryItems string
+	QueryArgs  []any
+	// ConverterQueryItems func(row SqlRow) (entity E, err error)
+	ScanRow func(row *E) []any
 	// QueryFirstLastIdts          string //TODO: remove
-	ConverterQueryFirstLastIdts func(row SqlRow) (firstIdt, lastIdt gcopt.Optional[I], err error) //TODO: remove
-	IdtColumn                   string
-	FieldColumn                 gcopt.Optional[func(fld gcfield.FieldNameOrdered, placeHolder int) gcopt.Optional[SubQueryPaginatedFieldOrdered]] //TODO: rename, chnage placeHolder int to string already adapted
-	LastQueryPlaceHolder        int
+	// ConverterQueryFirstLastIdts func(row SqlRow) (firstIdt, lastIdt gcopt.Optional[I], err error) //TODO: remove
+	IdtColumn            string
+	FieldColumn          gcopt.Optional[func(fld gcfield.FieldNameOrdered, placeHolder int) gcopt.Optional[SubQueryPaginatedFieldOrdered]] //TODO: rename, chnage placeHolder int to string already adapted
+	LastQueryPlaceHolder int
 }

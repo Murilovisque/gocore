@@ -90,13 +90,8 @@ func TestPostgresIntegration(t *testing.T) {
 				t.Log("table state base query:", targetRows)
 			}
 			reqArg := gcrepo.QueryPaginatedParams[testUserIdt, testUserModel]{
-				ConverterQueryItems: func(row gcrepo.SqlRow) (m testUserModel, err error) {
-					err = row.Scan(&m.idt, &m.name)
-					return
-				},
-				ConverterQueryFirstLastIdts: func(row gcrepo.SqlRow) (firstIdt, lastIdt gcopt.Optional[testUserIdt], err error) {
-					err = row.Scan(&firstIdt, &lastIdt)
-					return
+				ScanRow: func(row *testUserModel) []any {
+					return []any{&row.idt, &row.name}
 				},
 				IdtColumn:  "id",
 				QueryItems: baseSelectQuery,
@@ -139,33 +134,34 @@ func TestPostgresIntegration(t *testing.T) {
 		testNavegation := func(pageReq gcpag.PaginatedRequest[testUserIdt]) {
 			t.Log("test first page")
 			res := testPage(pageReq, 0, 2)
-			f, l := res.FirstPage.MustTake(), res.LastPage.MustTake()
-			if f.Idt != res.Items[0].idt {
-				t.Fatalf("expected first page match with first pagination: %v and %v", f.Idt, res.Items[0].idt)
-			} else if res.FirstPage.MustTake().Idt != f.Idt {
-				t.Fatalf("expected match first page in second pagination: %d not match %d", res.FirstPage.MustTake().Idt, f.Idt)
-			} else if res.LastPage.MustTake().Idt != l.Idt {
-				t.Fatalf("expected match last page in second pagination: %d not match %d", res.LastPage.MustTake().Idt, l.Idt)
+			if res.Items[0].name != expectedNames[0] || res.Items[1].name != expectedNames[1] {
+				t.Fatalf("expected same items")
+			} else if res.FirstPage.MustTake().Idt != res.Items[0].Idt() {
+				t.Fatalf("expected page is be the first: %d not match %d", res.FirstPage.MustTake().Idt, res.Items[0].idt)
+			} else if res.LastPage.IsPresent() {
+				t.Fatalf("expected last page is empty")
 			} else if res.PreviousPage.IsPresent() {
 				t.Fatal("expected first page does not have previous")
 			}
 
 			t.Log("test second page")
 			res = testPage(res.NextPageAsRequest().MustTake(), 2, 2)
-			if res.FirstPage.MustTake().Idt != f.Idt {
-				t.Fatalf("expected match first page in second pagination: %d not match %d", res.FirstPage.MustTake().Idt, f.Idt)
-			} else if res.LastPage.MustTake().Idt != l.Idt {
-				t.Fatalf("expected match last page in second pagination: %d not match %d", res.LastPage.MustTake().Idt, l.Idt)
+			if res.Items[0].name != expectedNames[2] || res.Items[1].name != expectedNames[3] {
+				t.Fatalf("expected same items")
+			} else if res.FirstPage.IsPresent() {
+				t.Fatalf("expected first page is empty")
+			} else if res.LastPage.IsPresent() {
+				t.Fatalf("expected last page is empty")
 			} else if !res.PreviousPage.IsPresent() {
 				t.Fatal("expected previous page in second page")
 			}
 
 			t.Log("test last page")
 			res = testPage(res.NextPageAsRequest().MustTake(), 4, 1)
-			if res.FirstPage.MustTake().Idt != f.Idt {
-				t.Fatalf("expected match first page in third pagination: %d not match %d", res.FirstPage.MustTake().Idt, f.Idt)
-			} else if res.LastPage.MustTake().Idt != l.Idt {
-				t.Fatalf("expected match last page in third pagination: %d not match %d", res.LastPage.MustTake().Idt, l.Idt)
+			if res.Items[0].name != expectedNames[4] {
+				t.Fatalf("expected same items")
+			} else if res.FirstPage.IsPresent() {
+				t.Fatalf("expected first page is empty")
 			} else if res.LastPage.MustTake().Idt != res.Items[0].idt {
 				t.Fatalf("expected page is be the last: %d not match %d", res.LastPage.MustTake().Idt, res.Items[0].idt)
 			} else if res.NextPage.IsPresent() {
@@ -174,24 +170,28 @@ func TestPostgresIntegration(t *testing.T) {
 
 			t.Log("test returning to second page")
 			res = testPage(res.PreviousPageAsRequest().MustTake(), 2, 2)
-			if res.FirstPage.MustTake().Idt != f.Idt {
-				t.Fatalf("expected match first page in second pagination: %d not match %d", res.FirstPage.MustTake().Idt, f.Idt)
-			} else if res.LastPage.MustTake().Idt != l.Idt {
-				t.Fatalf("expected match last page in second pagination: %d not match %d", res.LastPage.MustTake().Idt, l.Idt)
+			if res.Items[0].name != expectedNames[2] || res.Items[1].name != expectedNames[3] {
+				t.Fatalf("expected same items")
+			} else if res.FirstPage.IsPresent() {
+				t.Fatalf("expected first page is empty")
+			} else if res.LastPage.IsPresent() {
+				t.Fatalf("expected last page is empty")
 			} else if !res.NextPage.IsPresent() {
 				t.Fatal("expected second page to have next")
 			}
 
 			t.Log("test returning to first page")
 			res = testPage(res.PreviousPageAsRequest().MustTake(), 0, 2)
-			if res.FirstPage.MustTake().Idt != f.Idt {
-				t.Fatalf("expected match first page in second pagination: %d not match %d", res.FirstPage.MustTake().Idt, f.Idt)
-			} else if res.LastPage.MustTake().Idt != l.Idt {
-				t.Fatalf("expected match last page in second pagination: %d not match %d", res.LastPage.MustTake().Idt, l.Idt)
-			} else if !res.NextPage.IsPresent() {
-				t.Fatal("expected first page to have next")
+			if res.Items[0].name != expectedNames[0] || res.Items[1].name != expectedNames[1] {
+				t.Fatalf("expected same items")
+			} else if res.FirstPage.MustTake().Idt != res.Items[0].Idt() {
+				t.Fatalf("expected page is be the first: %d not match %d", res.FirstPage.MustTake().Idt, res.Items[0].idt)
+			} else if res.LastPage.IsPresent() {
+				t.Fatalf("expected last page is empty")
 			} else if res.PreviousPage.IsPresent() {
 				t.Fatal("expected first page does not have previous")
+			} else if !res.NextPage.IsPresent() {
+				t.Fatal("expected second page to have next")
 			}
 		}
 		t.Log("ascending test")

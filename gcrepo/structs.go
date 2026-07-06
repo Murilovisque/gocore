@@ -26,15 +26,15 @@ type SubQueryPaginatedFieldOrdered struct { //TOD: maybe rename
 	ColumnName string
 }
 
-type sqlRowWrapper struct {
-	SqlRow
-	fnWrapper func(args ...any) ([]any, error)
-}
+// type sqlRowWrapper struct { //TODO: remove
+// 	SqlRow
+// 	fnWrapper func(args ...any) ([]any, error)
+// }
 
-func (s *sqlRowWrapper) Scan(args ...any) error {
-	args, err := s.fnWrapper(args)
-	if err != nil {
-		return err
-	}
-	return s.SqlRow.Scan(args)
-}
+// func (s *sqlRowWrapper) Scan(args ...any) error {
+// 	args, err := s.fnWrapper(args)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return s.SqlRow.Scan(args)
+// }
