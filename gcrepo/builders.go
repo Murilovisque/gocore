@@ -179,29 +179,21 @@ func QueryPaginated[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](ctx context
 	defer rowsItems.Close()
 	var items []E
 	hasPrevious := false
-	if rowsItems.Next() {
-		// only first row can be a valid preview
-		var rowPrevious E
-		err = rowsItems.Scan(append(queryParams.ScanRow(&rowPrevious), &hasPrevious)...)
+	for rowsItems.Next() {
+		var rowPage E
+		isPreviousRow := false
+		err = rowsItems.Scan(append(queryParams.ScanRow(&rowPage), &isPreviousRow)...)
 		if err != nil {
-			return res, fmt.Errorf("gcrepo: convert item of the previous row failed. Cause %w", err)
-		} else if !hasPrevious { // if not exist a previous, so it is page items
-			items = append(items, rowPrevious)
+			return res, fmt.Errorf("gcrepo: convert item of the rows failed. Cause %w", err)
 		}
-		// continue taking page items
-		for rowsItems.Next() {
-			var rowPage E
-			isPreviousRow := false
-			err = rowsItems.Scan(append(queryParams.ScanRow(&rowPage), &isPreviousRow)...)
-			if err != nil {
-				return res, fmt.Errorf("gcrepo: convert item of the rows failed. Cause %w", err)
-			} else if !isPreviousRow {
-				items = append(items, rowPage)
-			}
+		if !isPreviousRow {
+			items = append(items, rowPage)
+		} else if !hasPrevious {
+			hasPrevious = isPreviousRow
 		}
-		if err = rowsItems.Err(); err != nil {
-			return res, fmt.Errorf("gcrepo: convert item after rows iteration failed. Cause %w", err)
-		}
+	}
+	if err = rowsItems.Err(); err != nil {
+		return res, fmt.Errorf("gcrepo: convert item after rows iteration failed. Cause %w", err)
 	}
 	hasNextPage := len(items) > pagReq.Size
 	if hasNextPage { //check if exist a next row
@@ -209,22 +201,28 @@ func QueryPaginated[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](ctx context
 	}
 	if pagReq.Orientation == gcpag.PreviousPage {
 		slices.Reverse(items)
+		hasNextPage, hasPrevious = hasPrevious, hasNextPage
 	}
 	return newPaginatedResponse(pagReq, items, hasPrevious, hasNextPage), nil
 }
 
 func newPaginatedResponse[I gcfield.IdtOrdered, E gcfield.Identifiable[I]](pageReq gcpag.PaginatedRequest[I], items []E, hasPreviousPage, hasNextPage bool) gcpag.PaginatedResponse[I, E] {
+	fmt.Println("=====", hasPreviousPage, hasNextPage) //TODO: remove
 	pageRes := gcpag.PaginatedResponse[I, E]{
 		Items: items,
 		Size:  pageReq.Size,
 		Field: pageReq.SortField,
 	}
 	if len(items) > 0 {
+		orientation := pageReq.Orientation
+		if orientation == gcpag.PreviousPage && pageReq.Order == gcpag.Asc {
+			orientation = orientation.Reverse()
+		}
 		pageRes.SelfPage = gcopt.Of(gcpag.AnotherPageRequest[I]{
 			Idt:           items[0].Idt(),
 			StartPosition: gcpag.StartAt,
 			Order:         pageReq.Order,
-			Orientation:   pageReq.Orientation,
+			Orientation:   orientation,
 		})
 		if hasPreviousPage {
 			pageRes.PreviousPage = gcopt.Of(gcpag.AnotherPageRequest[I]{

@@ -209,13 +209,13 @@ func TestPostgresIntegration(t *testing.T) {
 		}
 		testNavegation(pageReq)
 
-		// t.Log("ascending by name test")
-		// expectedNames = []any{"Baiana", "Bola", "Bolinha", "Bolinha", "Bunito"}
-		// pageReq = gcpag.PaginatedRequest[testUserIdt]{
-		// 	Size:  pageSize,
-		// 	Field: gcopt.Of(gcfield.FieldNameOrdered("name")),
-		// }
-		// testNavegation(pageReq)
+		t.Log("ascending by name test")
+		expectedNames = []any{"Baiana", "Bola", "Bolinha", "Bolinha", "Bunito"}
+		pageReq = gcpag.PaginatedRequest[testUserIdt]{
+			Size:      pageSize,
+			SortField: gcopt.Of(gcfield.FieldNameOrdered("name")),
+		}
+		testNavegation(pageReq)
 	})
 	t.Run("TransactionCommit", func(t *testing.T) {
 		txRes, err := res.Begin(ctx)
